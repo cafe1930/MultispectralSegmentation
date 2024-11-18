@@ -1,0 +1,14 @@
+[
+    "buildings_territory",
+    "natural_ground",
+    "natural_grow",
+    "natural_wetland",
+    "natural_wood",
+    "quasi_natural_ground",
+    "quasi_natural_grow",
+    "quasi_natural_wetland",
+    "quasi_natural_wood",
+    "transport",
+    "water",
+    "UNLABELED"
+]
