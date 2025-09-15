@@ -1,0 +1,68 @@
+batch_size: 16
+device: cuda:0
+epoch_num: 200
+input_image_size: 96
+loss:
+    params:
+        ignore_index: -100
+        label_smoothing: 0.15
+        reduction: mean
+        weight: null
+    type: crossentropy
+lr_scheduler:
+    args:
+        T_0: 25
+        T_mult: 1
+        eta_min: 0
+        last_epoch: -1
+    params:
+        frequency: 1
+        interval: epoch
+        monitor: val_loss
+        name: null
+        strict: true
+    type: cosine_warm_restarts
+multispecter_bands_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+name_postfix: null
+optimizer:
+    args: {}
+    type: adam
+path_to_dataset_root: C:\Users\admin\python_programming\DATA\DATA_FOR_TRAINIG_96
+segmentation_nn:
+    input_layer_config:
+        layer_path: encoder._conv_stem
+        params:
+            padding: &id001 !!python/tuple
+            - 1
+            - 1
+            stride: *id001
+        replace_type: channels+stride
+        weight_update_type: average_all
+    nn_architecture: custom_fpn
+    params:
+        activation: null
+        aux_params: null
+        classes: 11
+        decoder_dropout: 0.2
+        decoder_interpolation: nearest
+        decoder_merge_policy: add
+        decoder_pyramid_channels: 128
+        decoder_segmentation_channels: 128
+        encoder_depth: 5
+        encoder_name: efficientnet-b5
+        encoder_weights: imagenet
+        in_channels: 3
+        upsampling: 0

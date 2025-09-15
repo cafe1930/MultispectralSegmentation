@@ -13,8 +13,6 @@ import numpy as np
 
 import pandas as pd
 
-# datasets
-# datasets
 class SegmentationDataset(torch.utils.data.Dataset):
     def __init__(self, path_to_dataset_root:str, samples_df:pd.DataFrame, channel_indices:list, transforms:v2._transform.Transform, dtype:torch.dtype, device:torch.device):
         '''
