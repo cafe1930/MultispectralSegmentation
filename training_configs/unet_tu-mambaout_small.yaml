@@ -66,7 +66,35 @@ segmentation_nn:
         decoder_interpolation: nearest
         decoder_use_norm: batchnorm
         encoder_depth: 5
-        encoder_name: tu-maxvit_tiny_rw_224
+        encoder_name: tu-mambaout_small
         encoder_weights: imagenet
-        img_size: 96
         in_channels: 3
+train_augmentations:
+    affine:
+        degrees:
+        - 0
+        - 45
+        fill:
+        - 0
+        scale:
+        - 0.7
+        - 1.5
+        shear:
+        - 0
+        - 0.2
+        translate:
+        - 0
+        - 0.3
+    gauss_noise:
+        clip: false
+        mean: 0.0
+        sigma: 0.0008
+    horizontal_flip:
+        p: 0.5
+    perspective:
+        distortion_scale: 0.2
+        fill:
+        - 0
+        p: 0.3
+    vertical_flip:
+        p: 0.5

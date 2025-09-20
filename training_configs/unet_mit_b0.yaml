@@ -43,26 +43,60 @@ optimizer:
 path_to_dataset_root: C:\Users\admin\python_programming\DATA\DATA_FOR_TRAINIG_96
 segmentation_nn:
     input_layer_config:
-        layer_path: encoder._conv_stem
+        layer_path: encoder.patch_embed1.proj
         params:
-            padding: &id001 !!python/tuple
+            padding: !!python/tuple
+            - 3
+            - 3
+            stride: !!python/tuple
             - 1
             - 1
-            stride: *id001
         replace_type: channels+stride
         weight_update_type: average_all
-    nn_architecture: custom_fpn
+    nn_architecture: unet
     params:
         activation: null
         aux_params: null
         classes: 11
-        decoder_dropout: 0.2
+        decoder_attention_type: null
+        decoder_channels: !!python/tuple
+        - 256
+        - 128
+        - 128
+        - 128
+        - 128
         decoder_interpolation: nearest
-        decoder_merge_policy: add
-        decoder_pyramid_channels: 128
-        decoder_segmentation_channels: 128
+        decoder_use_norm: batchnorm
         encoder_depth: 5
-        encoder_name: efficientnet-b5
+        encoder_name: mit_b0
         encoder_weights: imagenet
         in_channels: 3
-        upsampling: 0
+train_augmentations:
+    affine:
+        degrees:
+        - 0
+        - 45
+        fill:
+        - 0
+        scale:
+        - 0.7
+        - 1.5
+        shear:
+        - 0
+        - 0.2
+        translate:
+        - 0
+        - 0.3
+    gauss_noise:
+        clip: false
+        mean: 0.0
+        sigma: 0.0008
+    horizontal_flip:
+        p: 0.5
+    perspective:
+        distortion_scale: 0.2
+        fill:
+        - 0
+        p: 0.3
+    vertical_flip:
+        p: 0.5

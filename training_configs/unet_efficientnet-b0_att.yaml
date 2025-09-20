@@ -36,7 +36,7 @@ multispecter_bands_indices:
 - 10
 - 11
 - 12
-name_postfix: null
+name_postfix: att
 optimizer:
     args: {}
     type: adam
@@ -51,16 +51,50 @@ segmentation_nn:
             stride: *id001
         replace_type: channels+stride
         weight_update_type: average_all
-    nn_architecture: fcn
+    nn_architecture: unet
     params:
         activation: null
         aux_params: null
         classes: 11
-        decoder_attention_type: null
+        decoder_attention_type: scse
+        decoder_channels: !!python/tuple
+        - 256
+        - 128
+        - 128
+        - 128
+        - 128
         decoder_interpolation: nearest
-        decoder_last_channel: 16
         decoder_use_norm: batchnorm
         encoder_depth: 5
         encoder_name: efficientnet-b0
         encoder_weights: imagenet
         in_channels: 3
+train_augmentations:
+    affine:
+        degrees:
+        - 0
+        - 45
+        fill:
+        - 0
+        scale:
+        - 0.7
+        - 1.5
+        shear:
+        - 0
+        - 0.2
+        translate:
+        - 0
+        - 0.3
+    gauss_noise:
+        clip: false
+        mean: 0.0
+        sigma: 0.0008
+    horizontal_flip:
+        p: 0.5
+    perspective:
+        distortion_scale: 0.2
+        fill:
+        - 0
+        p: 0.3
+    vertical_flip:
+        p: 0.5

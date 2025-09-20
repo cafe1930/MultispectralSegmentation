@@ -19,7 +19,13 @@ from typing import Dict, List
 import torch
 from torch import nn
 
-from models.models_factories import criterion_factory_dict, optimizers_factory_dict, lr_schedulers_factory_dict, segmentation_nns_factory_dict, create_model
+from models.models_factories import (
+    criterion_factory_dict,
+    optimizers_factory_dict,
+    lr_schedulers_factory_dict,
+    segmentation_nns_factory_dict,
+    create_model,
+    create_augmentation_transforms)
 from data import SegmentationDataset
 
 from datetime import datetime
@@ -77,7 +83,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     test_transforms = v2.Compose(
         [v2.Resize((input_image_size,input_image_size), antialias=True),v2.ToDtype(torch.float32, scale=True)])
     '''
-    train_transforms = nn.Identity()
+    train_transforms = create_augmentation_transforms(config_dict['train_augmentations']) 
     test_transforms = nn.Identity()
     # если ф-ция потерь перекрестная энтропия, то проверяем, есть ли там веса классов
     if config_dict['loss']['type'] == 'crossentropy':

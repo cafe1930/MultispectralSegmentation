@@ -110,6 +110,17 @@ class MultisizeConv(nn.Module):
             raise ValueError(f'self.aggregation_type should be either "add" or "cat". Got {self.aggregation_type}')
         return outputs
 
+transforms_factory_dict = {
+    'affine': v2.RandomAffine,
+    'perspective': v2.RandomPerspective,
+    'horizontal_flip': v2.RandomHorizontalFlip,
+    'vertical_flip': v2.RandomVerticalFlip,
+    'crop': v2.RandomCrop,
+    'gauss_noise': v2.GaussianNoise,
+    'gauss_blur': v2.GaussianBlur,
+    'elastic': v2.ElasticTransform,
+}
+
 segmentation_nns_factory_dict = {
     'unet': smp.Unet,
     'fpn': smp.FPN,
@@ -147,6 +158,14 @@ def cerate_weights_from_repeated_ch(weight, in_channels, new_in_channels):
     new_weight = torch.cat(
         [weight]*ch_multiple + [weight[:,:reminded_channels]], dim=1)
     return new_weight
+
+def create_augmentation_transforms(transforms_dict:Dict[str, Dict]):
+    transforms_list = []
+    for name, transform_params in transforms_dict.items():
+        transform_creation_fn = transforms_factory_dict[name]
+        transforms_list.append(transform_creation_fn(**transform_params))
+    #return v2.Compose([v2.RandomOrder(transforms_list)])
+    return v2.RandomOrder(transforms_list)
 
 def create_model(config_dict, segmentation_nns_factory_dict):
     model_name = config_dict['segmentation_nn']['nn_architecture']
