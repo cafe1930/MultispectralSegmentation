@@ -36,7 +36,7 @@ multispecter_bands_indices:
 - 10
 - 11
 - 12
-name_postfix: null
+name_postfix: scse_att
 optimizer:
     args: {}
     type: adam
@@ -50,14 +50,14 @@ segmentation_nn:
             - 1
             stride: *id001
         replace_type: channels+stride
-        weight_update_type: repeate
-    nn_architecture: unet++
+        weight_update_type: average_all
+    nn_architecture: unet
     params:
         activation: null
         aux_params: null
         classes: 11
-        decoder_attention_type: null
-        decoder_channels:
+        decoder_attention_type: scse
+        decoder_channels: !!python/tuple
         - 256
         - 128
         - 128

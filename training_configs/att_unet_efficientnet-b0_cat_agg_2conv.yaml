@@ -1,0 +1,398 @@
+batch_size: 4
+device: cuda:0
+epoch_num: 4
+input_image_size: 96
+loss:
+    params:
+        ignore_index: -100
+        label_smoothing: 0.15
+        reduction: mean
+        weight: null
+    type: crossentropy
+lr_scheduler:
+    args:
+        T_0: 25
+        T_mult: 1
+        eta_min: 0
+        last_epoch: -1
+    params:
+        frequency: 1
+        interval: epoch
+        monitor: val_loss
+        name: null
+        strict: true
+    type: cosine_warm_restarts
+multispecter_bands_indices:
+- 0
+- 1
+- 2
+- 3
+- 4
+- 5
+- 6
+- 7
+- 8
+- 9
+- 10
+- 11
+- 12
+name_postfix: cat_agg_2conv
+optimizer:
+    args: {}
+    type: adam
+path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
+segmentation_nn:
+    input_layer_config:
+        layer_path: encoder._conv_stem
+        params:
+            padding: &id001 !!python/tuple
+            - 1
+            - 1
+            stride: *id001
+        replace_type: channels+stride
+        weight_update_type: repeate
+    nn_architecture: att_unet
+    params:
+        activation: null
+        aux_params: null
+        classes: 11
+        decoder_channels: !!python/tuple
+        - 256
+        - 128
+        - 128
+        - 64
+        - 64
+        decoder_interpolation: nearest
+        decoder_layers_configs:
+        -   aggregation_layer:
+                layer: concat
+                params: {}
+            attention1:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: &id002 !!python/name:torch.nn.modules.batchnorm.BatchNorm2d ''
+                    out_conv_act: &id003 !!python/name:torch.nn.modules.activation.SiLU ''
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            attention2:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            conv:
+            -   activation_layer: &id004 !!python/name:torch.nn.modules.activation.ReLU ''
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            interpolation_mode: nearest
+        -   aggregation_layer:
+                layer: conv_cross_att
+                params:
+                    dropout: 0.2
+                    head_ch_dim: 4
+                    head_col_dim: 6
+                    head_row_dim: 6
+                    in_kernel_size: 3
+                    in_padding: 1
+                    in_stride: 1
+                    norm_layer: *id002
+            attention1:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            attention2:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            conv:
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            interpolation_mode: nearest
+        -   aggregation_layer:
+                layer: conv_cross_att
+                params:
+                    dropout: 0.2
+                    head_ch_dim: 4
+                    head_col_dim: 6
+                    head_row_dim: 6
+                    in_kernel_size: 3
+                    in_padding: 1
+                    in_stride: 1
+                    norm_layer: *id002
+            attention1:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            attention2:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            conv:
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            interpolation_mode: nearest
+        -   aggregation_layer:
+                layer: conv_cross_att
+                params:
+                    dropout: 0.2
+                    head_ch_dim: 4
+                    head_col_dim: 6
+                    head_row_dim: 6
+                    in_kernel_size: 3
+                    in_padding: 1
+                    in_stride: 1
+                    norm_layer: *id002
+            attention1:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            attention2:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            conv:
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            interpolation_mode: nearest
+        -   aggregation_layer:
+                layer: conv_cross_att
+                params:
+                    dropout: 0.2
+                    head_ch_dim: 4
+                    head_col_dim: 6
+                    head_row_dim: 6
+                    in_kernel_size: 3
+                    in_padding: 1
+                    in_stride: 1
+                    norm_layer: *id002
+            attention1:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            attention2:
+                layer: conv_msa
+                params:
+                    dropout: 0.2
+                    msa_head_ch_dim: 4
+                    msa_head_col_dim: 6
+                    msa_head_row_dim: 6
+                    msa_in_kernel_size: 3
+                    msa_in_padding: 1
+                    msa_in_stride: 1
+                    norm_layer: *id002
+                    out_conv_act: *id003
+                    out_conv_hidden_channels: 512
+                    out_conv_kernel_size: 1
+                    out_conv_padding: 0
+                    out_conv_stride: 1
+            conv:
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            -   activation_layer: *id004
+                bias: true
+                dilation: 1
+                groups: 1
+                inplace: true
+                kernel_size: 3
+                norm_layer: *id002
+                padding: 1
+                stride: 1
+            interpolation_mode: nearest
+        decoder_use_norm: batchnorm
+        encoder_depth: 5
+        encoder_name: efficientnet-b0
+        encoder_weights: imagenet
+        in_channels: 3
+train_augmentations:
+    affine:
+        degrees:
+        - 0
+        - 45
+        fill:
+        - 0
+        scale:
+        - 0.7
+        - 1.5
+        shear:
+        - 0
+        - 0.2
+        translate:
+        - 0
+        - 0.3
+    horizontal_flip:
+        p: 0.5
+    vertical_flip:
+        p: 0.5

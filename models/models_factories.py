@@ -21,34 +21,14 @@ from torchvision import models
 import torch.nn.functional as F
 
 import segmentation_models_pytorch as smp
-from segmentation_models_pytorch.base import (
-    ClassificationHead,
-    SegmentationHead,
-    SegmentationModel,
-)
-
-from segmentation_models_pytorch.base import modules as md
 
 from segmentation_models_pytorch.encoders import get_encoder
 from segmentation_models_pytorch.base.hub_mixin import supports_config_loading
-from typing import Any, Dict, Optional, Union, Callable, Sequence, List, Literal
-
-import lightning as L
-from lightning.pytorch.callbacks import ModelCheckpoint
-from lightning.pytorch.loggers import CSVLogger, Logger
-
-from torchmetrics import classification
-from torchmetrics import segmentation
-
-from sklearn.model_selection import train_test_split
-from sklearn import metrics
-
-import numpy as np
-
-import pandas as pd
+from typing import Dict
 
 from .fcn import FCN
 from .fpn import FPNMod
+from .att_unet import UnetAtt, ConcatDim1, ConvCrossAttentionBlock, ConvMSABlock
 
 from .losses import DiceCELoss
 
@@ -123,10 +103,12 @@ transforms_factory_dict = {
 
 segmentation_nns_factory_dict = {
     'unet': smp.Unet,
+    'att_unet': UnetAtt,
     'fpn': smp.FPN,
     'custom_fpn': FPNMod,
     'unet++': smp.UnetPlusPlus,
     'fcn': FCN,
+    #'custom_manet': MAnetMod,
 }
 
 criterion_factory_dict = {

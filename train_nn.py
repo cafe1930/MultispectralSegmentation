@@ -241,8 +241,8 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_saving_dir')
 
     sample_args = [
-        '--path_to_config', 'training_configs/fpn_effnet-b0_res10-20m.yaml',
-        '--training_mode', 'search_best_bands',
+        '--path_to_config', 'training_configs/att_unet_efficientnet-b0_cat_agg_2conv.yaml',
+        '--training_mode', 'single_nn',
         '--path_to_saving_dir', 'saving_dir'
     ]
     args = parser.parse_args(sample_args)

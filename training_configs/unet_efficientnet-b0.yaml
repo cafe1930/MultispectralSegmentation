@@ -1,6 +1,6 @@
 batch_size: 16
 device: cuda:0
-epoch_num: 200
+epoch_num: 300
 input_image_size: 96
 loss:
     params:
@@ -85,16 +85,7 @@ train_augmentations:
         translate:
         - 0
         - 0.3
-    gauss_noise:
-        clip: false
-        mean: 0.0
-        sigma: 0.0008
     horizontal_flip:
         p: 0.5
-    perspective:
-        distortion_scale: 0.2
-        fill:
-        - 0
-        p: 0.3
     vertical_flip:
         p: 0.5
