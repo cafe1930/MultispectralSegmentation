@@ -1,5 +1,5 @@
 import argparse
-from lightning_wrapper import LightningSegmentationModule
+from lightning_wrapper import LightningSegmentationModule, CSVLoggerMetricsAndConfusion
 
 import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -171,7 +171,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
 
     # задаем путь до папки с логгерами и создаем логгер, записывающий результаты в csv
     #path_to_saving_dir = 'saving_dir'
-    csv_logger = CSVLogger(
+    csv_logger = CSVLoggerMetricsAndConfusion(
         save_dir = path_to_saving_dir,
         name=model_name, 
         flush_logs_every_n_steps=1,
@@ -241,7 +241,7 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_saving_dir')
 
     sample_args = [
-        '--path_to_config', 'training_configs/att_unet_efficientnet-b0_cat_agg_2conv.yaml',
+        '--path_to_config', 'training_configs/unet++_efficientnet-b0.yaml',
         '--training_mode', 'single_nn',
         '--path_to_saving_dir', 'saving_dir'
     ]

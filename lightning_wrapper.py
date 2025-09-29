@@ -2,6 +2,11 @@ import torch
 from torch import nn
 
 import lightning as L
+from lightning.pytorch.loggers import CSVLogger 
+from lightning.pytorch.utilities.rank_zero import rank_zero_only
+
+import os
+import pandas as pd
 
 def compute_pred_mask(pred):
     '''
@@ -10,6 +15,25 @@ def compute_pred_mask(pred):
     #pred = pred.detach()
     _, pred_mask = pred.max(dim=1)
     return pred_mask#.cpu().numpy()
+
+class CSVLoggerMetricsAndConfusion(CSVLogger):
+    @rank_zero_only
+    def save_confusion(self, epoch_idx, confusion_matrix, class_names, mode):
+        os.makedirs(self.log_dir, exist_ok=True)
+        path_to_saving_file = os.path.join(self.log_dir, f'{mode}_confusion_matrices.csv')
+        if os.path.isfile(path_to_saving_file):
+            # читаем матрицы ошибок
+            confusion_df = pd.read_csv(path_to_saving_file)
+            multiindex = pd.MultiIndex.from_arrays([confusion_df['epoch'], confusion_df['classes']])
+            confusion_df = confusion_df.set_index(multiindex)
+            confusion_df = confusion_df.drop(columns=['epoch', 'classes'])
+        else:
+            confusion_df = pd.DataFrame()
+
+        multiindex = pd.MultiIndex.from_product([[epoch_idx], class_names], names=['epoch', 'classes'])
+        epoch_confusion_df = pd.DataFrame(data=confusion_matrix, columns=class_names, index=multiindex)
+        confusion_df = pd.concat([confusion_df, epoch_confusion_df])
+        confusion_df.to_csv(path_to_saving_file)
 
 class LightningSegmentationModule(L.LightningModule):
     def __init__(self, model:nn.Module, criterion:nn.Module, optimizer_cfg:dict, metrics_dict:dict, name2class_idx_dict:dict) -> None:
@@ -47,8 +71,7 @@ class LightningSegmentationModule(L.LightningModule):
             if 'dice' in metric_name.lower():
                 self.metrics_dict[mode][metric_name].update(pred_labels, true_labels)
             else:
-                self.metrics_dict[mode][metric_name].update(pred_labels.reshape(-1), true_labels.reshape(-1))
-        
+                self.metrics_dict[mode][metric_name].update(pred_labels.reshape(-1), true_labels.reshape(-1))    
     
     def training_step(self, batch, batch_idx):
         data, true_labels = batch
@@ -78,7 +101,13 @@ class LightningSegmentationModule(L.LightningModule):
             metric_val = metric.compute()
             if 'confusion' in metric_name.lower():
                 disp_name = f'{mode}_{metric_name}'
-                self.log(disp_name, metric_val.cpu().tolist(), on_step=False, on_epoch=True, prog_bar=False)
+                class_names = [self.class_idx2name_dict[i] for i in range(len(self.class_idx2name_dict))]
+                if isinstance(self.logger, CSVLoggerMetricsAndConfusion):
+                    self.logger.save_confusion(
+                        epoch_idx=self.current_epoch,
+                        confusion_matrix=metric_val.cpu().tolist(),
+                        class_names=class_names,
+                        mode=mode)
             else:
                 for i, value in enumerate(metric_val):
                     class_name = self.class_idx2name_dict[i]
@@ -100,5 +129,3 @@ class LightningSegmentationModule(L.LightningModule):
         (работает точно также, как и )
         '''
         self.log_metrics(mode='val')
-
-
