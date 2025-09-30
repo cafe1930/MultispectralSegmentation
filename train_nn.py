@@ -148,13 +148,13 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
             'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
             'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
             'recall': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            #'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
         },
         'val': {
             'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
             'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
             'recall': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            #'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
         }
     }
 
