@@ -241,7 +241,7 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_saving_dir')
 
     sample_args = [
-        '--path_to_config', 'training_configs/unet++_efficientnet-b0.yaml',
+        '--path_to_config', 'training_configs/att_unet_efficientnet-b0_win_cat_agg.yaml',
         '--training_mode', 'single_nn',
         '--path_to_saving_dir', 'saving_dir'
     ]

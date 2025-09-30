@@ -271,6 +271,163 @@ class ConvCrossAttentionBlock(nn.Module):
         
         return x
     
+class EmbeddingLayer(nn.Module):
+    def __init__(
+            self,
+            num_embeddings,
+            embedding_dim,
+            padding_idx=None,
+            max_norm=None,
+            norm_type=2.0,
+            scale_grad_by_freq=False,
+            sparse=False,
+            _weight=None,
+            _freeze=False,
+            device=None,
+            dtype=None
+            ):
+        super().__init__()
+        self.embedding = nn.Embedding(
+            num_embeddings,
+            embedding_dim,
+            padding_idx,
+            max_norm,
+            norm_type,
+            scale_grad_by_freq,
+            sparse,
+            _weight,
+            _freeze,
+            device,
+            dtype
+            )
+    def forward(self, x):
+        #!!!!
+        bs, seq_len, emb_dim = x.shape
+        positions = torch.arange(0, seq_len, dtype=torch.long).to(x.device)
+        pos_embeddings = self.embedding(positions)
+        return x + pos_embeddings
+    
+class FixedSizeLearnableEmbeddings(nn.Module):
+    def __init__(
+            self,
+            seq_len,
+            embedding_dim,
+            ):
+        super().__init__()
+        self.positional_encoding = nn.Parameter(torch.empty(1, seq_len, embedding_dim).normal_(std=0.02))
+
+    def forward(self,x):
+        return x + self.positional_encoding
+
+
+
+class LazyWindowVisionTransformerBlocks(nn.Module):
+    def __init__(
+            self,
+            rows_in_win,
+            cols_in_win,
+            channels:int,
+            layer_num:int,
+            num_heads: int,
+            transformer_mlp_dim:int,
+            attention_dropout:float,
+            dropout: float,
+            positional_encoding_block: str,
+            positional_encoding_block_params: Dict,
+            transformer_block: Callable[..., torch.nn.Module],
+            ):
+        super().__init__()
+        assert channels % num_heads == 0, f'Channel num should be devisible by the number of MSA heads'
+        self.cols_in_win = cols_in_win
+        self.rows_in_win = rows_in_win
+        self.seq_len = self.rows_in_win * self.cols_in_win
+        self.head_dim = channels//num_heads
+
+        #print(pos_enc_factory_dict[positional_encoding_block] is EmbeddingLayer)
+        #print(pos_enc_factory_dict[positional_encoding_block] is FixedSizeLearnableEmbeddings)
+
+        #print(positional_encoding_block is FixedSizeLearnableEmbeddings)
+        
+        
+        if positional_encoding_block == 'fixed_embeddings':
+
+            positional_encoding_block_params.update(
+                {'seq_len': self.seq_len, 'embedding_dim': channels}
+            )
+        elif positional_encoding_block == 'embedding_layer':
+            positional_encoding_block_params.update(
+                {'num_embeddings': self.seq_len, 'embedding_dim': channels}
+            )
+
+        positional_encoding_block = pos_enc_factory_dict[positional_encoding_block]
+        #print(type(positional_encoding_block)==EmbeddingLayer)
+        #print(positional_encoding_block)
+        #print(positional_encoding_block_params)
+        self.positional_encoding = positional_encoding_block(**positional_encoding_block_params)
+
+        # можно создать несколько трансформерных слоев
+        transformer_layers_dict = {
+            f'transformer_enc_{i}': transformer_block(
+                num_heads=num_heads,
+                hidden_dim=channels,
+                mlp_dim=transformer_mlp_dim,
+                attention_dropout=attention_dropout,
+                dropout=dropout)
+            for i in range(layer_num)
+        }
+        self.transformer_layers = nn.ModuleDict(transformer_layers_dict)
+
+    def forward(self, x):
+        #print(x.shape)
+        bs, channels, rows, cols = x.shape
+        rows_win_num = rows//self.rows_in_win
+        cols_win_num = cols//self.cols_in_win
+        #print(rows_win_num, cols_win_num)
+
+        # размер (bs, channels, rows, cols) преобразовываем в размер (bs, rows_win_num*cols_win_num, rows_in_win*cols_in_win, channels)
+        # rows=row_patches*rows_in_patch, cols=col_patches*cols_in_patch
+        
+        rearrange_pattern = 'bs channels (rows_win_num rows_in_win) (cols_win_num cols_in_win) -> (rows_win_num cols_win_num) bs (rows_in_win cols_in_win) channels'
+        rearrange_args = {
+            'rows_in_win':self.rows_in_win,
+            'rows_in_win':self.cols_in_win,
+            'rows_win_num':rows_win_num,
+            'cols_win_num':cols_win_num,
+        }
+            
+        h = eo.rearrange(
+            x,
+            rearrange_pattern,
+            **rearrange_args,
+        )
+        #print(f'h:{h.shape}')
+        windows_outs = []
+        # итерируем по окнам
+        for i, window in enumerate(h):
+            #print(f'encoded:{window.shape}')
+            # позиционное кодирование длля окна
+            window = self.positional_encoding(window)
+            #print(f'encoded window:{window.shape}')
+            #print()
+            # итерируем по слоям трансформера
+            for layer_name, layer in self.transformer_layers.items():
+
+                window = layer(window)
+            windows_outs.append(window.unsqueeze(0))
+        
+        windows_outs = torch.cat(windows_outs,dim=0)
+
+        # rearrange back
+        rearrange_pattern = '(rows_win_num cols_win_num) bs (rows_in_win cols_in_win) channels -> bs channels (rows_win_num rows_in_win) (cols_win_num cols_in_win)'
+        windows_outs = eo.rearrange(
+            windows_outs,
+            rearrange_pattern,
+            **rearrange_args,
+        )
+
+
+        return windows_outs
+    
 class ConcatDim1(nn.Module):
     '''
     Implementation of concatenation. It is nececcary for various aggreagation strategies in UNet decoder
@@ -284,8 +441,14 @@ unet_aggregation_factory_dict = {
     'conv_cross_att': ConvCrossAttentionBlock,
 }
 
+pos_enc_factory_dict = {
+    'fixed_embeddings': FixedSizeLearnableEmbeddings,
+    'embedding_layer': EmbeddingLayer,
+}
+
 unet_attention_factory_dict = {
     'conv_msa': ConvMSABlock,
+    'win_msa': LazyWindowVisionTransformerBlocks,
     'none': nn.Identity,
 }
     
@@ -487,6 +650,18 @@ class UnetDecoderBlockAtt(nn.Module):
                 config['attention1']['params']['msa_intermediate_channels'] = in_channels + skip_channels
                 config['attention1']['params']['msa_out_channels'] = in_channels + skip_channels
                 config['attention1']['params']['out_conv_out_channels'] = in_channels + skip_channels
+
+        elif att1_type == 'win_msa':
+            if 'cross_att' in agg_type:
+                config['attention1']['params']['channels'] = in_channels
+            else:
+                config['attention1']['params']['channels'] = in_channels + skip_channels
+            #pos_enc_type = config['attention1']['params']['positional_encoding_block']
+            #config['attention1']['params']['positional_encoding_block'] = pos_enc_factory_dict[pos_enc_type]
+
+        
+        
+            
         # получаем метод создания слоя агрегации признаков
         create_aggregation = unet_aggregation_factory_dict[agg_type]
         if skip_channels != 0:
@@ -522,8 +697,14 @@ class UnetDecoderBlockAtt(nn.Module):
             config['attention2']['params']['msa_intermediate_channels'] = out_channels
             config['attention2']['params']['msa_out_channels'] = out_channels
             config['attention2']['params']['out_conv_out_channels'] = out_channels
+        elif att2_type == 'win_msa':
+            config['attention2']['params']['channels'] = out_channels
+            #pos_enc_type = config['attention2']['params']['positional_encoding_block']
+            #config['attention2']['params']['positional_encoding_block'] = pos_enc_factory_dict[pos_enc_type]
+            
         create_attention = unet_attention_factory_dict[att2_type]
         self.attention2 = create_attention(**config['attention2']['params'])
+        
 
     def forward(
         self,
@@ -547,6 +728,8 @@ class UnetDecoderBlockAtt(nn.Module):
         feature_map = self.attention2(feature_map)
         return feature_map
     
+    
+
 class UnetDecoderAtt(nn.Module):
     """The decoder part of the U-Net architecture.
 
