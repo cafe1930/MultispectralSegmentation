@@ -1,0 +1,101 @@
+batch_size: 16
+device: cuda:0
+epoch_num: 300
+input_image_size: 96
+loss:
+    params:
+        ce_ignore_index: -100
+        ce_label_smoothing: 0.15
+        ce_reducion: mean
+        ce_weight: null
+        dice_classes: null
+        dice_eps: 1.0e-07
+        dice_from_logits: true
+        dice_ignore_index: -100
+        dice_log_loss: false
+        dice_mode: multiclass
+        dice_smooth: 0.15
+        is_trainable_weights: true
+        losses_weight:
+        - 0.5
+        - 0.5
+        weights_processing_type: softmax
+    type: dice_crossentropy
+lr_scheduler:
+    args:
+        T_0: 25
+        T_mult: 1
+        eta_min: 0
+        last_epoch: -1
+    params:
+        frequency: 1
+        interval: epoch
+        monitor: val_loss
+        name: null
+        strict: true
+    type: cosine_warm_restarts
+multispecter_bands_indices:
+- 1
+- 2
+- 3
+- 7
+- ndvi
+name_postfix: null
+optimizer:
+    args: {}
+    type: adam
+path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
+segmentation_nn:
+    input_layer_config:
+        layer_path: encoder._conv_stem
+        params:
+            padding: &id001 !!python/tuple
+            - 1
+            - 1
+            stride: *id001
+        replace_type: channels+stride
+        weight_update_type: repeate
+    nn_architecture: custom_fpn_dice_ce
+    params:
+        activation: null
+        aux_params: null
+        classes: 11
+        decoder_dropout: 0.2
+        decoder_interpolation: nearest
+        decoder_merge_policy: add
+        decoder_pyramid_channels: 128
+        decoder_segmentation_channels: 128
+        encoder_depth: 5
+        encoder_name: efficientnet-b0
+        encoder_weights: imagenet
+        in_channels: 3
+        upsampling: 0
+train_augmentations:
+    affine:
+        degrees:
+        - 0
+        - 45
+        fill:
+        - 0
+        scale:
+        - 0.7
+        - 1.5
+        shear:
+        - 0
+        - 0.2
+        translate:
+        - 0
+        - 0.3
+    gauss_noise:
+        clip: false
+        mean: 0.0
+        sigma: 0.0008
+    horizontal_flip:
+        p: 0.5
+    perspective:
+        distortion_scale: 0.2
+        fill:
+        - 0
+        p: 0.3
+    vertical_flip:
+        p: 0.5

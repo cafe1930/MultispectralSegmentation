@@ -241,7 +241,15 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_saving_dir')
 
     sample_args = [
-        '--path_to_config', 'training_configs/att_unet_efficientnet-b0_win_cat_agg.yaml',
+        '--path_to_config',
+        'training_configs/custom_fpn_ce_efficientnet-b0_RGB.yaml',
+        'training_configs/custom_fpn_ce_efficientnet-b0_10m.yaml',
+        'training_configs/custom_fpn_ce_efficientnet-b0_10-20m_res.yaml',
+        'training_configs/custom_fpn_ce_efficientnet-b0_full_sp.yaml',
+        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDVI.yaml',
+        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDWI.yaml',
+        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDBI.yaml',
+        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDRE.yaml',
         '--training_mode', 'train_nns',
         '--path_to_saving_dir', 'saving_dir'
     ]
