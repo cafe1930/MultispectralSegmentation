@@ -46,7 +46,7 @@ segmentation_nn:
             stride: *id001
         replace_type: channels+stride
         weight_update_type: repeate
-    nn_architecture: custom_fpn_dice
+    nn_architecture: custom_fpn
     params:
         activation: null
         aux_params: null

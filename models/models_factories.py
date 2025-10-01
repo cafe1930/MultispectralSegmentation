@@ -160,21 +160,22 @@ def create_model(config_dict, segmentation_nns_factory_dict):
         config_dict['segmentation_nn']['input_layer_config']['layer_path']
         )
     if 'channels' in config_dict['segmentation_nn']['input_layer_config']['replace_type']:
+        new_input_conv = nn.Conv2d(
+            in_channels=in_channels,
+            out_channels=input_conv.out_channels,
+            kernel_size=input_conv.kernel_size,
+            #stride=conv1.stride,
+            stride=config_dict['segmentation_nn']['input_layer_config']['params']['stride'],
+            #padding=conv1.padding,
+            padding=config_dict['segmentation_nn']['input_layer_config']['params']['padding'],
+            dilation=input_conv.dilation,
+            groups=input_conv.groups,
+            bias=input_conv.bias is not None
+        )
         if in_channels != 3:
             # получаем входной слой, специфический для конкретной нейронной сети
             
-            new_input_conv = nn.Conv2d(
-                in_channels=in_channels,
-                out_channels=input_conv.out_channels,
-                kernel_size=input_conv.kernel_size,
-                #stride=conv1.stride,
-                stride=config_dict['segmentation_nn']['input_layer_config']['params']['stride'],
-                #padding=conv1.padding,
-                padding=config_dict['segmentation_nn']['input_layer_config']['params']['padding'],
-                dilation=input_conv.dilation,
-                groups=input_conv.groups,
-                bias=input_conv.bias is not None
-            )
+            
             if config_dict['segmentation_nn']['params']['encoder_weights'] is not None:
                 # выбор типа обнолвления весов
                 if config_dict['segmentation_nn']['input_layer_config']['weight_update_type'] == 'average_all':
@@ -191,15 +192,19 @@ def create_model(config_dict, segmentation_nns_factory_dict):
                         [input_conv.weight]*ch_multiple + [input_conv.weight[:,:reminded_channels]], dim=1)
                     '''
                     new_weight = cerate_weights_from_repeated_ch(input_conv.weight, input_conv.in_channels, in_channels)
-                    
-                if input_conv.bias is not None:
-                    new_input_conv.bias = input_conv.bias
+                    new_input_conv.weight = nn.Parameter(new_weight)
+        else:
+            # если у нас три канала на входе, то просто перезаписываем вес
+            new_input_conv.weight = nn.Parameter(input_conv.weight)
 
-            # перезаписываем входной слой исходя из специфики оригинальной сети
-            model.set_submodule(
+        if input_conv.bias is not None:
+            new_input_conv.bias = input_conv.bias
+        # перезаписываем входной слой исходя из специфики оригинальной сети
+        model.set_submodule(
                 config_dict['segmentation_nn']['input_layer_config']['layer_path'],
                 new_input_conv
                 )
+
     elif 'multisize_conv' in config_dict['segmentation_nn']['input_layer_config']['replace_type']:
         multisize_params = config_dict['segmentation_nn']['input_layer_config']['params']
         new_input_conv = MultisizeConv(**multisize_params)

@@ -23,24 +23,19 @@ lr_scheduler:
         strict: true
     type: cosine_warm_restarts
 multispecter_bands_indices:
-- 0
 - 1
 - 2
 - 3
-- 4
-- 5
-- 6
-- 7
-- 8
-- 9
-- 10
-- 11
-- 12
-name_postfix: full_sp
+- ndvi
+- ndwi
+- ndbi
+- ndre
+name_postfix: rgb-ndvi-ndwi-ndbi-ndre
 optimizer:
     args: {}
     type: adam
 path_to_dataset_root: C:\Users\admin\python_programming\DATA\DATA_FOR_TRAINIG_96
+#path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
 segmentation_nn:
     input_layer_config:
         layer_path: encoder._conv_stem

@@ -242,7 +242,9 @@ if __name__ == '__main__':
 
     sample_args = [
         '--path_to_config',
+        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDVI-NDWI-NDBI-NDRE.yaml',
         'training_configs/custom_fpn_ce_efficientnet-b0_RGB.yaml',
+        
         'training_configs/custom_fpn_ce_efficientnet-b0_10m.yaml',
         'training_configs/custom_fpn_ce_efficientnet-b0_10-20m_res.yaml',
         'training_configs/custom_fpn_ce_efficientnet-b0_full_sp.yaml',

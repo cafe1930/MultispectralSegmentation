@@ -70,7 +70,7 @@ segmentation_nn:
                 3x3: 1
         replace_type: multisize_conv
         weight_update_type: repeat
-    nn_architecture: custom_fpn_multisize
+    nn_architecture: custom_fpn
     params:
         activation: null
         aux_params: null

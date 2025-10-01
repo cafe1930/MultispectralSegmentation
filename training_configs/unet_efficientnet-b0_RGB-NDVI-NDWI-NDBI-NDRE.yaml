@@ -23,20 +23,14 @@ lr_scheduler:
         strict: true
     type: cosine_warm_restarts
 multispecter_bands_indices:
-- 0
 - 1
 - 2
 - 3
-- 4
-- 5
-- 6
-- 7
-- 8
-- 9
-- 10
-- 11
-- 12
-name_postfix: full_sp
+- ndvi
+- ndwi
+- ndbi
+- ndre
+name_postfix: rgb-ndvi-ndwi-ndbi-ndre
 optimizer:
     args: {}
     type: adam
@@ -50,22 +44,25 @@ segmentation_nn:
             - 1
             stride: *id001
         replace_type: channels+stride
-        weight_update_type: average_all
-    nn_architecture: custom_fpn
+        weight_update_type: repeate
+    nn_architecture: unet
     params:
         activation: null
         aux_params: null
         classes: 11
-        decoder_dropout: 0.2
+        decoder_attention_type: null
+        decoder_channels: !!python/tuple
+        - 256
+        - 128
+        - 128
+        - 128
+        - 128
         decoder_interpolation: nearest
-        decoder_merge_policy: add
-        decoder_pyramid_channels: 128
-        decoder_segmentation_channels: 128
+        decoder_use_norm: batchnorm
         encoder_depth: 5
         encoder_name: efficientnet-b0
         encoder_weights: imagenet
         in_channels: 3
-        upsampling: 0
 train_augmentations:
     affine:
         degrees:

@@ -48,7 +48,7 @@ segmentation_nn:
             stride: *id001
         replace_type: channels+stride
         weight_update_type: average_all
-    nn_architecture: custom_fpn_ce
+    nn_architecture: custom_fpn
     params:
         activation: null
         aux_params: null
