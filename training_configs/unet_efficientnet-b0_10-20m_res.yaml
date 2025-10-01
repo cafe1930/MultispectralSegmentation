@@ -23,7 +23,6 @@ lr_scheduler:
         strict: true
     type: cosine_warm_restarts
 multispecter_bands_indices:
-- 0
 - 1
 - 2
 - 3
@@ -31,12 +30,9 @@ multispecter_bands_indices:
 - 5
 - 6
 - 7
-- 8
-- 9
-- 10
 - 11
 - 12
-name_postfix: null
+name_postfix: 10-20m_res
 optimizer:
     args: {}
     type: adam

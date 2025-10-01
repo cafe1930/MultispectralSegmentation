@@ -236,29 +236,37 @@ def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_to_config')
+    parser.add_argument('--path_to_config', nargs='+')
     parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands"')
     parser.add_argument('--path_to_saving_dir')
 
     sample_args = [
         '--path_to_config', 'training_configs/att_unet_efficientnet-b0_win_cat_agg.yaml',
-        '--training_mode', 'single_nn',
+        '--training_mode', 'train_nns',
         '--path_to_saving_dir', 'saving_dir'
     ]
     args = parser.parse_args(sample_args)
-    path_to_config = args.path_to_config
+    paths_to_configs = args.path_to_config
     training_mode = args.training_mode
     path_to_saving_dir = args.path_to_saving_dir
 
-    # чтение файла конфигурации
-    with open(path_to_config) as fd:
-        if path_to_config.endswith('.yaml'):
-            config_dict = yaml.load(fd, Loader=yaml.Loader)
-        elif path_to_config.endswith('.json'):
-            config_dict = json.load(fd)
-    if training_mode == 'single_nn':
-        create_and_train_moodel(config_dict, path_to_saving_dir)
+    
+    if training_mode == 'train_nns':
+        for path_to_config in paths_to_configs:
+            with open(path_to_config) as fd:
+                if path_to_config.endswith('.yaml'):
+                    config_dict = yaml.load(fd, Loader=yaml.Loader)
+                elif path_to_config.endswith('.json'):
+                    config_dict = json.load(fd)
+            create_and_train_moodel(config_dict, path_to_saving_dir)
     elif training_mode == 'search_best_bands':
+        path_to_config = paths_to_configs[0]
+        # чтение файла конфигурации
+        with open(path_to_config) as fd:
+            if path_to_config.endswith('.yaml'):
+                config_dict = yaml.load(fd, Loader=yaml.Loader)
+            elif path_to_config.endswith('.json'):
+                config_dict = json.load(fd)
         search_best_multispecter_bands_combination(config_dict, path_to_saving_dir, basic_bands_indices=[1, 2, 3, 7])
 
 
