@@ -1,6 +1,6 @@
-batch_size: 4
+batch_size: 16
 device: cuda:0
-epoch_num: 4
+epoch_num: 300
 input_image_size: 96
 loss:
     params:
@@ -223,6 +223,9 @@ segmentation_nn:
         -   aggregation_layer:
                 layer: concat
                 params: {}
+            attention1:
+                layer: none
+                params: {}
             attention2:
                 layer: win_msa
                 params:
@@ -256,8 +259,6 @@ segmentation_nn:
                 padding: 1
                 stride: 1
             interpolation_mode: nearest
-            layer: none
-            params: {}
         decoder_use_norm: batchnorm
         encoder_depth: 5
         encoder_name: efficientnet-b0
