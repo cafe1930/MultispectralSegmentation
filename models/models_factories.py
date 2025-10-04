@@ -151,6 +151,14 @@ def create_augmentation_transforms(transforms_dict:Dict[str, Dict]):
 
 def create_model(config_dict, segmentation_nns_factory_dict):
     model_name = config_dict['segmentation_nn']['nn_architecture']
+    if 'fpn' in model_name:
+        stride = config_dict['segmentation_nn']['input_layer_config']['params']['stride']
+        if isinstance(stride, (list, tuple)):
+            stride_val = stride[0]
+        elif isinstance(stride, (list, tuple)):
+            stride_val = stride
+        #if stride_val != 1:
+        config_dict['segmentation_nn']['params']['upsampling'] = stride_val
     # создаем нейронную сеть из фабрики
     model = segmentation_nns_factory_dict[model_name](**config_dict['segmentation_nn']['params'])
     multispecter_bands_indices = config_dict['multispecter_bands_indices']

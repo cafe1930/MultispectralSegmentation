@@ -36,42 +36,26 @@ multispecter_bands_indices:
 - 10
 - 11
 - 12
-name_postfix: null
+name_postfix: ''
 optimizer:
     args: {}
-    type: adam
+    type: adamw
 #path_to_dataset_root: C:\Users\admin\python_programming\DATA\DATA_FOR_TRAINIG_96
 path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
 #path_to_dataset_root: /home/mikhail_u/develop/DATA/DATA_FOR_TRAINIG_96
+#path_to_dataset_root: /home/debian/develop/mikhail_u/DATA_FOR_TRAINIG_96
 segmentation_nn:
     input_layer_config:
         layer_path: encoder._conv_stem
         params:
-            aggregation_type: add
-            bias:
-                1x1: false
-                3x3: false
-            dilation:
-                1x1: 1
-                3x3: 1
-            groups:
-                1x1: 1
-                3x3: 1
-            in_channels: 3
-            kernel_size:
-                1x1: 1
-                3x3: 3
-            out_channels:
-                1x1: 32
-                3x3: 32
-            padding:
-                1x1: 0
-                3x3: 1
-            stride:
-                1x1: 1
-                3x3: 1
-        replace_type: multisize_conv
-        weight_update_type: repeat
+            padding: !!python/tuple
+            - 1
+            - 1
+            stride: !!python/tuple
+            - 1
+            - 1
+        replace_type: channels+stride
+        weight_update_type: average_all
     nn_architecture: custom_fpn
     params:
         activation: null
@@ -103,16 +87,7 @@ train_augmentations:
         translate:
         - 0
         - 0.3
-    gauss_noise:
-        clip: false
-        mean: 0.0
-        sigma: 0.0008
     horizontal_flip:
         p: 0.5
-    perspective:
-        distortion_scale: 0.2
-        fill:
-        - 0
-        p: 0.3
     vertical_flip:
         p: 0.5

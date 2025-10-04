@@ -29,7 +29,7 @@ from models.models_factories import (
 from data import SegmentationDataset
 
 from datetime import datetime
-from itertools import combinations
+from itertools import combinations, product
 
 def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     path_to_dataset_root = config_dict['path_to_dataset_root']
@@ -128,7 +128,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     nn_arch_str = config_dict["segmentation_nn"]["nn_architecture"]
     nn_encoder_str = config_dict["segmentation_nn"]["params"]["encoder_name"]
     name_postfix = config_dict["name_postfix"]
-    if name_postfix is not None:
+    if name_postfix is not None and len(name_postfix) != 0:
         model_name = f'{nn_arch_str}_{nn_encoder_str}_{name_postfix} {createion_time_str}'
     else:
         model_name = f'{nn_arch_str}_{nn_encoder_str} {createion_time_str}'
@@ -209,9 +209,9 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
 
 def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving_dir:str, basic_bands_indices: List):
     '''
-    Выполняется перебор всех возможных комбинаций 
+    Выполняется перебор всех возможных комбинаций каналов мультиспектра
     '''
-    experiment_date = datetime.now().strftime('%Y-%m%dT%H-%M-%S')
+    experiment_date = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
     path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'best_bands_search', f'experiment_{experiment_date}')
     os.makedirs(path_to_experiment_saving_dir, exist_ok=True)
     multispecter_bands_indices = config_dict['multispecter_bands_indices']
@@ -234,28 +234,70 @@ def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving
             create_and_train_moodel(config_dict, path_to_experiment_saving_dir)
             combination_cnt += 1
 
+def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
+    experiment_date = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
+    path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'bands_instride_pretrained', f'experiment_{experiment_date}')
+    os.makedirs(path_to_experiment_saving_dir, exist_ok=True)
+    bands_combinations_list = [
+        ('b_rgb', [1, 2, 3]),
+        ('b_10m', [1, 2, 3, 7]),
+        ('b_10-20m', [1, 2, 3, 4, 5, 6, 7, 11, 12]),
+        ('b_full_sp', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+        ('b_rgb-ndvi', [1, 2, 3, 'ndvi']),
+        ('b_rgb-ndwi', [1, 2, 3, 'ndwi']),
+        ('b_rgb-ndbi', [1, 2, 3, 'ndbi']),
+        ('b_rgb-ndre', [1, 2, 3, 'ndre']),
+        ('b_rgb-allind', [1, 2, 3, 'ndvi', 'ndwi', 'ndbi', 'ndre']),
+    ]
+
+    inconv_strides_list = {
+        ('st_1', (1, 1)),
+        ('st_2', (2, 2)),
+    }
+    pretrained_list = {
+        ('w_rnd', None),
+        ('w_pr', 'imagenet'),
+    }
+    all_combinations_list = list(product(bands_combinations_list, inconv_strides_list, pretrained_list))
+
+    all_combinations_list = [{n:v for n, v in entry} for entry in all_combinations_list]
+    init_name_postfix = config_dict['name_postfix']
+    combinations_num = len(all_combinations_list)
+    for combination_cnt, combination in enumerate(all_combinations_list):
+        print('#######################################################')
+        print(f'# Train combination #{combination_cnt+1} of total {combinations_num}')
+        print('#######################################################')
+        name_postfix = init_name_postfix
+        for comb_name, comb_val in combination.items():
+            if comb_name.startswith('b_'):
+                config_dict['multispecter_bands_indices'] = comb_val
+            elif comb_name.startswith('st_'):
+                config_dict['segmentation_nn']['input_layer_config']['params']['stride'] = comb_val
+            elif comb_name.startswith('w_'):
+                config_dict['segmentation_nn']['params']['encoder_weights'] = comb_val
+            name_postfix = f'{name_postfix}_{comb_name}'
+
+        config_dict['name_postfix'] = name_postfix
+
+        create_and_train_moodel(config_dict, path_to_experiment_saving_dir)
+
+        config_dict['name_postfix'] = init_name_postfix
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--path_to_config', nargs='+')
-    parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands"')
+    parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands", "investigate_bands_instride_pretrained"')
     parser.add_argument('--path_to_saving_dir')
 
     sample_args = [
         '--path_to_config',
-        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDVI-NDWI-NDBI-NDRE.yaml',
-        'training_configs/custom_fpn_ce_efficientnet-b0_RGB.yaml',
+        'training_configs/fcn_efficientnet-b0.yaml',
         
-        'training_configs/custom_fpn_ce_efficientnet-b0_10m.yaml',
-        'training_configs/custom_fpn_ce_efficientnet-b0_10-20m_res.yaml',
-        'training_configs/custom_fpn_ce_efficientnet-b0_full_sp.yaml',
-        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDVI.yaml',
-        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDWI.yaml',
-        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDBI.yaml',
-        'training_configs/custom_fpn_ce_efficientnet-b0_RGB-NDRE.yaml',
-        '--training_mode', 'train_nns',
+        '--training_mode', 'investigate_bands_instride_pretrained',
         '--path_to_saving_dir', 'saving_dir'
     ]
     args = parser.parse_args(sample_args)
+    print(args)
     paths_to_configs = args.path_to_config
     training_mode = args.training_mode
     path_to_saving_dir = args.path_to_saving_dir
@@ -269,6 +311,16 @@ if __name__ == '__main__':
                 elif path_to_config.endswith('.json'):
                     config_dict = json.load(fd)
             create_and_train_moodel(config_dict, path_to_saving_dir)
+
+    elif training_mode == 'investigate_bands_instride_pretrained':
+        for path_to_config in paths_to_configs:
+            with open(path_to_config) as fd:
+                if path_to_config.endswith('.yaml'):
+                    config_dict = yaml.load(fd, Loader=yaml.Loader)
+                elif path_to_config.endswith('.json'):
+                    config_dict = json.load(fd)
+            investigate_bands_instride_pretrained(config_dict,path_to_saving_dir)
+
     elif training_mode == 'search_best_bands':
         path_to_config = paths_to_configs[0]
         # чтение файла конфигурации

@@ -36,13 +36,14 @@ multispecter_bands_indices:
 - 10
 - 11
 - 12
-name_postfix: null
+name_postfix: ''
 optimizer:
     args: {}
-    type: adam
+    type: adamw
 #path_to_dataset_root: C:\Users\admin\python_programming\DATA\DATA_FOR_TRAINIG_96
 path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
 #path_to_dataset_root: /home/mikhail_u/develop/DATA/DATA_FOR_TRAINIG_96
+#path_to_dataset_root: /home/debian/develop/mikhail_u/DATA_FOR_TRAINIG_96
 segmentation_nn:
     input_layer_config:
         layer_path: encoder.patch_embed1.proj
@@ -89,16 +90,7 @@ train_augmentations:
         translate:
         - 0
         - 0.3
-    gauss_noise:
-        clip: false
-        mean: 0.0
-        sigma: 0.0008
     horizontal_flip:
         p: 0.5
-    perspective:
-        distortion_scale: 0.2
-        fill:
-        - 0
-        p: 0.3
     vertical_flip:
         p: 0.5
