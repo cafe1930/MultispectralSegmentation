@@ -291,7 +291,7 @@ if __name__ == '__main__':
 
     sample_args = [
         '--path_to_config',
-        'training_configs/fcn_efficientnet-b0.yaml',
+        'training_configs/unet_tu-maxvit_tiny_rw_224.yaml',
         
         '--training_mode', 'investigate_bands_instride_pretrained',
         '--path_to_saving_dir', 'saving_dir'
