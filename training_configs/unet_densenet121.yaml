@@ -23,6 +23,7 @@ lr_scheduler:
         strict: true
     type: cosine_warm_restarts
 multispecter_bands_indices:
+- 0
 - 1
 - 2
 - 3
@@ -30,9 +31,12 @@ multispecter_bands_indices:
 - 5
 - 6
 - 7
+- 8
+- 9
+- 10
 - 11
 - 12
-name_postfix: 10-20m_res
+name_postfix: ''
 optimizer:
     args: {}
     type: adamw
@@ -42,7 +46,7 @@ path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
 #path_to_dataset_root: /home/debian/develop/mikhail_u/DATA_FOR_TRAINIG_96
 segmentation_nn:
     input_layer_config:
-        layer_path: encoder._conv_stem
+        layer_path: encoder.features.conv0
         params:
             padding: &id001 !!python/tuple
             - 1
@@ -65,7 +69,7 @@ segmentation_nn:
         decoder_interpolation: nearest
         decoder_use_norm: batchnorm
         encoder_depth: 5
-        encoder_name: efficientnet-b0
+        encoder_name: densenet121
         encoder_weights: imagenet
         in_channels: 3
 train_augmentations:

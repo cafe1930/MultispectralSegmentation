@@ -43,7 +43,7 @@ segmentation_nn:
             - 1
             stride: *id001
         replace_type: channels+stride
-        weight_update_type: repeate
+        weight_update_type: average_all
     nn_architecture: unet
     params:
         activation: null
