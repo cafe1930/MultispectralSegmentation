@@ -243,11 +243,11 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
         ('b_10m', [1, 2, 3, 7]),
         ('b_10-20m', [1, 2, 3, 4, 5, 6, 7, 11, 12]),
         ('b_full_sp', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
-        ('b_rgb-ndvi', [1, 2, 3, 'ndvi']),
-        ('b_rgb-ndwi', [1, 2, 3, 'ndwi']),
-        ('b_rgb-ndbi', [1, 2, 3, 'ndbi']),
-        ('b_rgb-ndre', [1, 2, 3, 'ndre']),
-        ('b_rgb-allind', [1, 2, 3, 'ndvi', 'ndwi', 'ndbi', 'ndre']),
+        #('b_rgb-ndvi', [1, 2, 3, 'ndvi']),
+        #('b_rgb-ndwi', [1, 2, 3, 'ndwi']),
+        #('b_rgb-ndbi', [1, 2, 3, 'ndbi']),
+        #('b_rgb-ndre', [1, 2, 3, 'ndre']),
+        #('b_rgb-allind', [1, 2, 3, 'ndvi', 'ndwi', 'ndbi', 'ndre']),
     ]
 
     inconv_strides_list = {
@@ -258,7 +258,7 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
         ('w_rnd', None),
         ('w_pr', 'imagenet'),
     }
-    all_combinations_list = list(product(bands_combinations_list, inconv_strides_list, pretrained_list))
+    all_combinations_list = list(product(bands_combinations_list, inconv_strides_list))
 
     all_combinations_list = [{n:v for n, v in entry} for entry in all_combinations_list]
     init_name_postfix = config_dict['name_postfix']
@@ -291,7 +291,7 @@ if __name__ == '__main__':
 
     sample_args = [
         '--path_to_config',
-        'training_configs/unet_densenet121.yaml',
+        'training_configs/unet_cspdarknet53.yaml',
         
         '--training_mode', 'investigate_bands_instride_pretrained',
         '--path_to_saving_dir', 'saving_dir'

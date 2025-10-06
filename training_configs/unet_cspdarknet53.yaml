@@ -39,18 +39,18 @@ multispecter_bands_indices:
 name_postfix: ''
 optimizer:
     args: {}
-    type: adamw
+    type: adam
 path_to_dataset_root: C:\Users\admin\python_programming\DATA\DATA_FOR_TRAINIG_96
 #path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
 #path_to_dataset_root: /home/mikhail_u/develop/DATA/DATA_FOR_TRAINIG_96
 #path_to_dataset_root: /home/debian/develop/mikhail_u/DATA_FOR_TRAINIG_96
 segmentation_nn:
     input_layer_config:
-        layer_path: encoder.features.conv0
+        layer_path: encoder.model.stem_conv1.conv
         params:
             padding:
-            - 3
-            - 3
+            - 1
+            - 1
             stride:
             - 1
             - 1
@@ -66,12 +66,12 @@ segmentation_nn:
         - 256
         - 128
         - 128
-        - 128
-        - 128
+        - 64
+        - 64
         decoder_interpolation: nearest
         decoder_use_norm: batchnorm
         encoder_depth: 5
-        encoder_name: densenet121
+        encoder_name: tu-cspdarknet53
         encoder_weights: imagenet
         in_channels: 3
 train_augmentations:
