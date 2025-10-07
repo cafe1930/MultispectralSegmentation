@@ -1,0 +1,14 @@
+input_layer_config:
+    layer_path: encoder._conv_stem
+    params:
+        padding:
+        - 1
+        - 1
+        stride:
+        - 1
+        - 1
+    replace_type: channels+stride
+    weight_update_type: average_all
+model_params:
+    encoder_name: efficientnet-b2
+    encoder_weights: imagenet

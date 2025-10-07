@@ -28,6 +28,7 @@ from typing import Dict
 
 from .fcn import FCN
 from .fpn import FPNMod
+from .unet_pp import UnetPlusPlusMod
 from .att_unet import UnetAtt, ConcatDim1, ConvCrossAttentionBlock, ConvMSABlock
 
 from .losses import DiceCELoss
@@ -106,7 +107,7 @@ segmentation_nns_factory_dict = {
     'att_unet': UnetAtt,
     'fpn': smp.FPN,
     'custom_fpn': FPNMod,
-    'unet++': smp.UnetPlusPlus,
+    'unet++': UnetPlusPlusMod,
     'fcn': FCN,
     #'custom_manet': MAnetMod,
 }
@@ -163,19 +164,36 @@ def create_model(config_dict, segmentation_nns_factory_dict):
     model = segmentation_nns_factory_dict[model_name](**config_dict['segmentation_nn']['params'])
     multispecter_bands_indices = config_dict['multispecter_bands_indices']
     in_channels = len(multispecter_bands_indices)
-    # замена входного слоя, если кол-во каналов изображения не равно трем
+    
+    
     input_conv = model.get_submodule(
         config_dict['segmentation_nn']['input_layer_config']['layer_path']
         )
     if 'channels' in config_dict['segmentation_nn']['input_layer_config']['replace_type']:
+        if 'cspdarknet' in config_dict['segmentation_nn']['params']['encoder_name']:
+            new_stride = input_conv.stride
+            new_pad = input_conv.padding
+
+            repl_stride_conv = model.get_submodule(
+                config_dict['segmentation_nn']['input_layer_config']['stride_repl_layer_path']
+                )
+            repl_stride_conv.stride = config_dict['segmentation_nn']['input_layer_config']['params']['stride']
+            repl_stride_conv.padding = config_dict['segmentation_nn']['input_layer_config']['params']['padding']
+
+            model.set_submodule(
+                config_dict['segmentation_nn']['input_layer_config']['stride_repl_layer_path'],
+                repl_stride_conv
+                )
+
+        else:
+            new_stride = config_dict['segmentation_nn']['input_layer_config']['params']['stride']
+            new_pad = config_dict['segmentation_nn']['input_layer_config']['params']['padding']
         new_input_conv = nn.Conv2d(
             in_channels=in_channels,
             out_channels=input_conv.out_channels,
             kernel_size=input_conv.kernel_size,
-            #stride=conv1.stride,
-            stride=config_dict['segmentation_nn']['input_layer_config']['params']['stride'],
-            #padding=conv1.padding,
-            padding=config_dict['segmentation_nn']['input_layer_config']['params']['padding'],
+            stride=new_stride,
+            padding=new_pad,
             dilation=input_conv.dilation,
             groups=input_conv.groups,
             bias=input_conv.bias is not None

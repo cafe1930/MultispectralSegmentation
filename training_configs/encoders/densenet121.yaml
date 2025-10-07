@@ -1,0 +1,15 @@
+input_layer_config:
+    layer_path: encoder.features.conv0
+    params:
+        padding:
+        - 3
+        - 3
+        stride:
+        - 1
+        - 1
+    replace_type: channels+stride
+    weight_update_type: average_all
+model_params:
+    encoder_name: densenet121
+    encoder_weights: imagenet
+    

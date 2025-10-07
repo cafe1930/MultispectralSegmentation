@@ -8,11 +8,15 @@ from lightning.pytorch.loggers import CSVLogger
 from torchmetrics import classification
 from torchmetrics import segmentation
 
+from copy import deepcopy
+
 import os
 import pandas as pd
 import numpy as np
 import json
 import yaml
+import time
+from datetime import timedelta
 
 from typing import Dict, List
 
@@ -32,6 +36,7 @@ from datetime import datetime
 from itertools import combinations, product
 
 def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
+    t_start = time.time()
     path_to_dataset_root = config_dict['path_to_dataset_root']
 
     path_to_dataset_info_csv = os.path.join(path_to_dataset_root, 'data_info_table.csv')
@@ -107,6 +112,8 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
 
     model = create_model(config_dict, segmentation_nns_factory_dict)
     model = model.to(device)
+
+    print(model.encoder)
 
     # создаем датасеты и даталоадеры
     train_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=train_images_df, channel_indices=multispecter_bands_indices, transforms=train_transforms, dtype=torch.float32, device=device)
@@ -200,10 +207,13 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
         yaml.dump(config_dict, fd, indent=4)
 
     trainer.fit(segmentation_module , train_loader, test_loader)
+    t_stop = time.time()
+
+    elapsed_time = timedelta(seconds=t_stop-t_start)
 
     print()
     print(('----------------------------------------------------------'))
-    print(f'Training {model_name} is over for {epoch_num} epochs')
+    print(f'Training {model_name} is over for {epoch_num} epochs; t={elapsed_time}')
     print(('----------------------------------------------------------'))
     print()
 
@@ -285,44 +295,73 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path_to_config', nargs='+')
-    parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands", "investigate_bands_instride_pretrained"')
+    parser.add_argument('--paths_to_model_configs', nargs='+')
+    parser.add_argument('--paths_to_encoder_configs', nargs='+')
+    parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands", "investigate_bands_instride"')
     parser.add_argument('--path_to_saving_dir')
 
     sample_args = [
-        '--path_to_config',
-        'training_configs/unet_cspdarknet53.yaml',
+        '--paths_to_model_configs',
+        'training_configs/models/unet++.yaml',
+        'training_configs/models/fpn.yaml',
+        'training_configs/models/fcn.yaml',
+        'training_configs/models/unet.yaml',
+
+        '--paths_to_encoder_configs',
+        'training_configs/encoders/tu-maxvit_tiny.yaml',
+        'training_configs/encoders/efficientnet-b2.yaml',
+        'training_configs/encoders/tu-cspdarknet53.yaml',
+        'training_configs/encoders/tu-mobilenetv4_hybrid_medium.yaml',
+        'training_configs/encoders/densenet121.yaml',
+        'training_configs/encoders/tu-seresnext50_32x4d.yaml',
         
-        '--training_mode', 'investigate_bands_instride_pretrained',
+        '--training_mode', 'investigate_bands_instride',
         '--path_to_saving_dir', 'saving_dir'
     ]
     args = parser.parse_args(sample_args)
-    print(args)
-    paths_to_configs = args.path_to_config
+    #print(args)
+    paths_to_model_configs = args.paths_to_model_configs
+    paths_to_encoder_configs = args.paths_to_encoder_configs
     training_mode = args.training_mode
     path_to_saving_dir = args.path_to_saving_dir
-
     
     if training_mode == 'train_nns':
-        for path_to_config in paths_to_configs:
-            with open(path_to_config) as fd:
-                if path_to_config.endswith('.yaml'):
+        for path_to_model_config in paths_to_model_configs:
+            with open(path_to_model_config) as fd:
+                if path_to_model_config.endswith('.yaml'):
                     config_dict = yaml.load(fd, Loader=yaml.Loader)
-                elif path_to_config.endswith('.json'):
+                elif path_to_model_config.endswith('.json'):
                     config_dict = json.load(fd)
             create_and_train_moodel(config_dict, path_to_saving_dir)
 
-    elif training_mode == 'investigate_bands_instride_pretrained':
-        for path_to_config in paths_to_configs:
-            with open(path_to_config) as fd:
-                if path_to_config.endswith('.yaml'):
+    elif training_mode == 'investigate_bands_instride':
+        for path_to_model_config in paths_to_model_configs:
+            with open(path_to_model_config) as fd:
+                if path_to_model_config.endswith('.yaml'):
                     config_dict = yaml.load(fd, Loader=yaml.Loader)
-                elif path_to_config.endswith('.json'):
+                elif path_to_model_config.endswith('.json'):
                     config_dict = json.load(fd)
-            investigate_bands_instride_pretrained(config_dict,path_to_saving_dir)
+
+            
+            for path_to_encoder_config in paths_to_encoder_configs:
+                current_model_config = deepcopy(config_dict)
+                with open(path_to_encoder_config) as fd:
+                    if path_to_encoder_config.endswith('.yaml'):
+                        encoder_dict = yaml.load(fd, Loader=yaml.Loader)
+                    elif path_to_encoder_config.endswith('.json'):
+                        encoder_dict = json.load(fd)
+
+                current_model_config['segmentation_nn']['input_layer_config'] = encoder_dict['input_layer_config']
+
+                current_model_config['segmentation_nn']['params'].update(encoder_dict['model_params'])
+                print()
+                print(current_model_config)
+                print()
+
+                investigate_bands_instride_pretrained(current_model_config, path_to_saving_dir)
 
     elif training_mode == 'search_best_bands':
-        path_to_config = paths_to_configs[0]
+        path_to_config = paths_to_model_configs[0]
         # чтение файла конфигурации
         with open(path_to_config) as fd:
             if path_to_config.endswith('.yaml'):

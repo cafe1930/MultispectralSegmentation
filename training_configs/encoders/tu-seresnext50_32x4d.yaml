@@ -1,0 +1,14 @@
+input_layer_config:
+    layer_path: encoder.model.conv1
+    params:
+        padding:
+        - 3
+        - 3
+        stride:
+        - 1
+        - 1
+    replace_type: channels+stride
+    weight_update_type: average_all
+model_params:
+    encoder_name: tu-seresnext50_32x4d
+    encoder_weights: imagenet

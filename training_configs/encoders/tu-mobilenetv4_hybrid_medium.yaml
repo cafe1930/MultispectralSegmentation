@@ -1,0 +1,14 @@
+input_layer_config:
+    layer_path: encoder.model.conv_stem
+    params:
+        padding:
+        - 1
+        - 1
+        stride:
+        - 1
+        - 1
+    replace_type: channels+stride
+    weight_update_type: average_all
+model_params:
+    encoder_name: tu-mobilenetv4_hybrid_medium
+    encoder_weights: imagenet
