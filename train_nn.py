@@ -113,7 +113,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     model = create_model(config_dict, segmentation_nns_factory_dict)
     model = model.to(device)
 
-    print(model.encoder)
+    #print(model.encoder)
 
     # создаем датасеты и даталоадеры
     train_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=train_images_df, channel_indices=multispecter_bands_indices, transforms=train_transforms, dtype=torch.float32, device=device)
@@ -212,9 +212,9 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     elapsed_time = timedelta(seconds=t_stop-t_start)
 
     print()
-    print(('----------------------------------------------------------'))
+    print('----------------------------------------------------------')
     print(f'Training {model_name} is over for {epoch_num} epochs; t={elapsed_time}')
-    print(('----------------------------------------------------------'))
+    print('----------------------------------------------------------')
     print()
 
 def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving_dir:str, basic_bands_indices: List):
@@ -269,6 +269,9 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
         ('w_pr', 'imagenet'),
     }
     all_combinations_list = list(product(bands_combinations_list, inconv_strides_list))
+    all_combinations_list = sorted(all_combinations_list, key=lambda x: x[0][0]+x[1][0])
+    #print(all_combinations_list)
+    #exit()
 
     all_combinations_list = [{n:v for n, v in entry} for entry in all_combinations_list]
     init_name_postfix = config_dict['name_postfix']
@@ -354,9 +357,9 @@ if __name__ == '__main__':
                 current_model_config['segmentation_nn']['input_layer_config'] = encoder_dict['input_layer_config']
 
                 current_model_config['segmentation_nn']['params'].update(encoder_dict['model_params'])
-                print()
-                print(current_model_config)
-                print()
+                #print()
+                #print(current_model_config)
+                #print()
 
                 investigate_bands_instride_pretrained(current_model_config, path_to_saving_dir)
 
