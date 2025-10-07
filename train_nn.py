@@ -249,10 +249,10 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
     path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'bands_instride_pretrained', f'experiment_{experiment_date}')
     os.makedirs(path_to_experiment_saving_dir, exist_ok=True)
     bands_combinations_list = [
-        ('b_rgb', [1, 2, 3]),
-        ('b_10m', [1, 2, 3, 7]),
+        #('b_rgb', [1, 2, 3]),
+        #('b_10m', [1, 2, 3, 7]),
         ('b_10-20m', [1, 2, 3, 4, 5, 6, 7, 11, 12]),
-        ('b_full_sp', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
+        #('b_full_sp', [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]),
         #('b_rgb-ndvi', [1, 2, 3, 'ndvi']),
         #('b_rgb-ndwi', [1, 2, 3, 'ndwi']),
         #('b_rgb-ndbi', [1, 2, 3, 'ndbi']),
@@ -306,17 +306,17 @@ if __name__ == '__main__':
     sample_args = [
         '--paths_to_model_configs',
         'training_configs/models/unet++.yaml',
-        'training_configs/models/fpn.yaml',
-        'training_configs/models/fcn.yaml',
-        'training_configs/models/unet.yaml',
+        #'training_configs/models/fpn.yaml',
+        #'training_configs/models/fcn.yaml',
+        #'training_configs/models/unet.yaml',
 
         '--paths_to_encoder_configs',
         'training_configs/encoders/tu-maxvit_tiny.yaml',
-        'training_configs/encoders/efficientnet-b2.yaml',
-        'training_configs/encoders/tu-cspdarknet53.yaml',
-        'training_configs/encoders/tu-mobilenetv4_hybrid_medium.yaml',
-        'training_configs/encoders/densenet121.yaml',
-        'training_configs/encoders/tu-seresnext50_32x4d.yaml',
+        #'training_configs/encoders/efficientnet-b2.yaml',
+        #'training_configs/encoders/tu-cspdarknet53.yaml',
+        #'training_configs/encoders/tu-mobilenetv4_hybrid_medium.yaml',
+        #'training_configs/encoders/densenet121.yaml',
+        #'training_configs/encoders/tu-seresnext50_32x4d.yaml',
         
         '--training_mode', 'investigate_bands_instride',
         '--path_to_saving_dir', 'saving_dir'
