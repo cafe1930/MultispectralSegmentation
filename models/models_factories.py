@@ -27,6 +27,7 @@ from segmentation_models_pytorch.base.hub_mixin import supports_config_loading
 from typing import Dict
 
 from .fcn import FCN
+from .fcn1 import FCN1
 from .fpn import FPNMod
 from .unet_pp import UnetPlusPlusMod
 from .att_unet import UnetAtt, ConcatDim1, ConvCrossAttentionBlock, ConvMSABlock
@@ -109,6 +110,7 @@ segmentation_nns_factory_dict = {
     'custom_fpn': FPNMod,
     'unet++': UnetPlusPlusMod,
     'fcn': FCN,
+    'fcn1': FCN1,
     #'custom_manet': MAnetMod,
 }
 

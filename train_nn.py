@@ -270,7 +270,9 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
     }
     all_combinations_list = list(product(bands_combinations_list, inconv_strides_list))
     all_combinations_list = sorted(all_combinations_list, key=lambda x: x[0][0]+x[1][0])
-    #print(all_combinations_list)
+    
+    #for i, c in enumerate(all_combinations_list):
+    #    print(f'{i+1} {c}')
     #exit()
 
     all_combinations_list = [{n:v for n, v in entry} for entry in all_combinations_list]
@@ -305,14 +307,15 @@ if __name__ == '__main__':
 
     sample_args = [
         '--paths_to_model_configs',
-        'training_configs/models/unet++.yaml',
+        #'training_configs/models/unet++.yaml',
         #'training_configs/models/fpn.yaml',
         #'training_configs/models/fcn.yaml',
+        'training_configs/models/fcn1.yaml',
         #'training_configs/models/unet.yaml',
 
         '--paths_to_encoder_configs',
-        'training_configs/encoders/tu-maxvit_tiny.yaml',
-        #'training_configs/encoders/efficientnet-b2.yaml',
+        #'training_configs/encoders/tu-maxvit_tiny.yaml',
+        'training_configs/encoders/efficientnet-b2.yaml',
         #'training_configs/encoders/tu-cspdarknet53.yaml',
         #'training_configs/encoders/tu-mobilenetv4_hybrid_medium.yaml',
         #'training_configs/encoders/densenet121.yaml',
