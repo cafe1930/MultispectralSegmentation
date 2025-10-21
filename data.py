@@ -1,7 +1,7 @@
 import torch
 
 import os
-
+import glob
 
 import torchvision
 from torchvision.transforms import v2
@@ -12,6 +12,34 @@ import warnings
 import numpy as np
 
 import pandas as pd
+
+class HSI_dataset(torch.utils.data.Dataset):
+    def __init__(self, path_to_dataset_partition, augmentation_transforms, device):
+        self.device = device
+        hsi_paths_list = glob.glob(os.path.join(path_to_dataset_partition, 'rs', '*.npy'))
+        self.paths_to_hsi_gt_pairs = []
+        for hsi_path in hsi_paths_list:
+            hsi_name = os.path.split(hsi_path)[-1]
+            gt_path = os.path.join(path_to_dataset_partition, 'gt', hsi_name)
+            self.paths_to_hsi_gt_pairs.append((hsi_path, gt_path))
+
+        self.augmentation_transforms = augmentation_transforms
+
+    def __len__(self):
+        return len(self.paths_to_hsi_gt_pairs)
+    
+    def __getitem__(self, idx):
+        path_to_image, path_to_mask = self.paths_to_hsi_gt_pairs[idx]
+        hsi = torch.as_tensor(np.load(path_to_image), device=self.device).permute(2, 0, 1)
+        mask = torch.as_tensor(np.load(path_to_mask), device=self.device).long()
+
+        transforms_dict = {
+            'image':tv_tensors.Image(hsi, device=self.device),
+            'mask':tv_tensors.Mask(mask, device=self.device)
+            }
+        transformed = self.augmentation_transforms(transforms_dict)
+        return transformed['image'], transformed['mask']
+
 
 class SegmentationDataset(torch.utils.data.Dataset):
     def __init__(self, path_to_dataset_root:str, samples_df:pd.DataFrame, channel_indices:list, transforms:v2._transform.Transform, dtype:torch.dtype, device:torch.device):
