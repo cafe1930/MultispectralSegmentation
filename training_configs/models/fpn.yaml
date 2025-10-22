@@ -63,6 +63,7 @@ segmentation_nn:
         #encoder_weights: imagenet
         in_channels: 3
         upsampling: 0
+monitoring_metric: iou_mean
 train_augmentations:
     affine:
         degrees:

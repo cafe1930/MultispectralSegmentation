@@ -61,6 +61,7 @@ segmentation_nn:
         #encoder_name: efficientnet-b0
         #encoder_weights: imagenet
         in_channels: 3
+monitoring_metric: iou_mean
 train_augmentations:
     affine:
         degrees:

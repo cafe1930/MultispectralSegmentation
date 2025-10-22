@@ -108,6 +108,12 @@ class LightningSegmentationModule(L.LightningModule):
                         confusion_matrix=metric_val.cpu().tolist(),
                         class_names=class_names,
                         mode=mode)
+            elif 'accuracy' in metric_name.lower() or 'kappa' in metric_name.lower():
+                #print('-----------------------------')
+                #print(f'{metric_name}={metric_val}')
+                #print('-----------------------------')
+                disp_name = f'{mode}_{metric_name}'
+                self.log(disp_name, metric_val, on_step=False, on_epoch=True, prog_bar=True)
             else:
                 for i, value in enumerate(metric_val):
                     class_name = self.class_idx2name_dict[i]

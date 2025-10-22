@@ -37,6 +37,7 @@ from itertools import combinations, product
 
 def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     t_start = time.time()
+    # создание датасета
     path_to_dataset_root = config_dict['path_to_dataset_root']
 
     path_to_dataset_info_csv = os.path.join(path_to_dataset_root, 'data_info_table.csv')

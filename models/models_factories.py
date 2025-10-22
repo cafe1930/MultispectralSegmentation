@@ -8,6 +8,8 @@ from datetime import datetime
 import json
 import yaml
 
+import numpy as np
+
 from argparse import ArgumentParser
 
 from itertools import combinations
@@ -153,6 +155,7 @@ def create_augmentation_transforms(transforms_dict:Dict[str, Dict]):
     return v2.RandomOrder(transforms_list)
 
 def create_model(config_dict, segmentation_nns_factory_dict):
+    
     model_name = config_dict['segmentation_nn']['nn_architecture']
     if 'fpn' in model_name:
         stride = config_dict['segmentation_nn']['input_layer_config']['params']['stride']
@@ -165,8 +168,12 @@ def create_model(config_dict, segmentation_nns_factory_dict):
     # создаем нейронную сеть из фабрики
     model = segmentation_nns_factory_dict[model_name](**config_dict['segmentation_nn']['params'])
     multispecter_bands_indices = config_dict['multispecter_bands_indices']
-    in_channels = len(multispecter_bands_indices)
-    
+
+    if isinstance(multispecter_bands_indices, (list, tuple, np.ndarray, torch.Tensor)):
+        in_channels = len(multispecter_bands_indices)
+    elif isinstance(multispecter_bands_indices, int):
+        in_channels = multispecter_bands_indices
+
     
     input_conv = model.get_submodule(
         config_dict['segmentation_nn']['input_layer_config']['layer_path']
@@ -186,7 +193,6 @@ def create_model(config_dict, segmentation_nns_factory_dict):
                 config_dict['segmentation_nn']['input_layer_config']['stride_repl_layer_path'],
                 repl_stride_conv
                 )
-
         else:
             new_stride = config_dict['segmentation_nn']['input_layer_config']['params']['stride']
             new_pad = config_dict['segmentation_nn']['input_layer_config']['params']['padding']
@@ -201,9 +207,7 @@ def create_model(config_dict, segmentation_nns_factory_dict):
             bias=input_conv.bias is not None
         )
         if in_channels != 3:
-            # получаем входной слой, специфический для конкретной нейронной сети
-            
-            
+            # получаем входной слой, специфический для конкретной нейронной сети            
             if config_dict['segmentation_nn']['params']['encoder_weights'] is not None:
                 # выбор типа обнолвления весов
                 if config_dict['segmentation_nn']['input_layer_config']['weight_update_type'] == 'average_all':

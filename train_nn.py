@@ -5,7 +5,7 @@ import lightning as L
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger
 
-from torchmetrics import classification
+from torchmetrics import classification, nominal
 from torchmetrics import segmentation
 
 from copy import deepcopy
@@ -30,13 +30,13 @@ from models.models_factories import (
     segmentation_nns_factory_dict,
     create_model,
     create_augmentation_transforms)
-from data import SegmentationDataset
+from data import SegmentationDataset, HSI_dataset
 
 from datetime import datetime
 from itertools import combinations, product
 
-def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
-    t_start = time.time()
+def create_seismic_sensors_dataset(config_dict):
+
     path_to_dataset_root = config_dict['path_to_dataset_root']
 
     path_to_dataset_info_csv = os.path.join(path_to_dataset_root, 'data_info_table.csv')
@@ -90,6 +90,103 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     '''
     train_transforms = create_augmentation_transforms(config_dict['train_augmentations']) 
     test_transforms = nn.Identity()
+
+        # создаем датасеты и даталоадеры
+    train_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=train_images_df, channel_indices=multispecter_bands_indices, transforms=train_transforms, dtype=torch.float32, device=device)
+    test_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=test_images_df, channel_indices=multispecter_bands_indices, transforms=test_transforms, dtype=torch.float32, device=device)
+    
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config_dict['batch_size'], shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config_dict['batch_size'])
+
+    return train_loader, test_loader, class_name2idx_dict, classes_weights
+
+def create_hsi_uav_dataset(config_dict):
+    path_to_dataset_root = config_dict['path_to_dataset_root']
+    device = config_dict['device']
+    input_image_size = config_dict['input_image_size']
+
+    train_transforms = create_augmentation_transforms(config_dict['train_augmentations']) 
+    test_transforms = nn.Identity()
+
+    train_dataset = HSI_dataset(
+        path_to_dataset_partition=os.path.join(path_to_dataset_root, 'Train', 'Training'),
+        augmentation_transforms=train_transforms,
+        device=device
+        )
+
+    val_dataset = HSI_dataset(
+        path_to_dataset_partition=os.path.join(path_to_dataset_root, 'Train', 'Validation'),
+        augmentation_transforms=test_transforms,
+        device=device
+        )
+
+    test_dataset = HSI_dataset(
+        path_to_dataset_partition=os.path.join(path_to_dataset_root, 'Test'),
+        augmentation_transforms=test_transforms,
+        device=device
+        )
+    
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config_dict['batch_size'], shuffle=True)
+    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config_dict['batch_size'])
+    class_name2idx_dict = {f'{i}':i  for i in range(30)}
+    classes_weights = np.array([1. for c in class_name2idx_dict]).astype(np.float32)
+    return train_loader, test_loader, class_name2idx_dict, classes_weights
+
+    
+
+def create_seismic_metrics(class_name2idx_dict, device):
+    metrics_dict = {
+        'train': {
+            'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'recall': classification.Recall(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+        },
+        'val': {
+            'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'recall': classification.Recall(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+        }
+    }
+    return metrics_dict
+
+def create_hsi_uav_metrics(class_name2idx_dict, device):
+    metrics_dict = {
+        'train': {
+            'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'recall': classification.Recall(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'accuracy':  classification.Accuracy(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+            'kappa': classification.CohenKappa(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+        },
+        'val': {
+            'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'recall': classification.Recall(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'accuracy':  classification.Accuracy(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+            'kappa': classification.CohenKappa(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+        }
+    }
+    return metrics_dict
+    
+
+def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str):
+    t_start = time.time()
+    if config_dict['segmentation_nn']['params']['encoder_weights'] is None:
+
+        name_postfix = config_dict['name_postfix']
+        config_dict['name_postfix'] = f'{name_postfix}_rndw' if len(name_postfix) != 0 else 'rndw'
+    # Создание датасета
+    if task == 'seismic_sensors':
+        train_loader, test_loader, class_name2idx_dict, classes_weights = create_seismic_sensors_dataset(config_dict)
+    elif task == 'hsi_uav':
+        train_loader, test_loader, class_name2idx_dict, classes_weights = create_hsi_uav_dataset(config_dict)
+    # вычисл. устройство, на котором проводится обучение
+    device = config_dict['device']
+
     # если ф-ция потерь перекрестная энтропия, то проверяем, есть ли там веса классов
     if config_dict['loss']['type'] == 'crossentropy':
         # если в параметрах функции потерь стоит строка 'classes', надо передать в функцию вектор весов классов
@@ -114,13 +211,6 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     model = model.to(device)
 
     #print(model.encoder)
-
-    # создаем датасеты и даталоадеры
-    train_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=train_images_df, channel_indices=multispecter_bands_indices, transforms=train_transforms, dtype=torch.float32, device=device)
-    test_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=test_images_df, channel_indices=multispecter_bands_indices, transforms=test_transforms, dtype=torch.float32, device=device)
-    
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config_dict['batch_size'], shuffle=True)
-    test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config_dict['batch_size'])
 
     # тестовое чтение данных
     for data, labels in test_loader:
@@ -150,20 +240,11 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
 
     # создаем список словарей с информацией о вычисляемых метриках с помощью multiclass confusion matrix
     # см. подробнее ддокументацию к функции compute_metric_from_confusion
-    metrics_dict = {
-        'train': {
-            'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            'recall': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
-        },
-        'val': {
-            'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            'recall': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
-            'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
-        }
-    }
+    if task == 'seismic_sensors':
+        metrics_dict = create_seismic_metrics(class_name2idx_dict, device)
+    elif task == 'hsi_uav':
+        metrics_dict = create_hsi_uav_metrics(class_name2idx_dict, device)
+    
 
     optimizer_cfg = {
         'optmizer': optimizers_factory_dict[config_dict['optimizer']['type']],
@@ -187,11 +268,12 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str):
     # создаем объект, записывающий в чекпоинт лучшую модель
     path_to_save_model_dir = os.path.join(path_to_saving_dir, model_name)
     os.makedirs(path_to_save_model_dir, exist_ok=True)
+    monitoring_metric = config_dict['monitoring_metric']
     checkpoint_callback = ModelCheckpoint(
         mode="max",
-        filename=model_name+"-{epoch:02d}-{val_iou_mean:.3}",
+        filename=model_name+f"-{{epoch:02d}}-{{val_{monitoring_metric}:.3}}",
         dirpath=path_to_save_model_dir, 
-        save_top_k=1, monitor="val_iou_mean"
+        save_top_k=1, monitor=f"val_{monitoring_metric}"
         )
 
     trainer = L.Trainer(logger=[csv_logger],
@@ -241,7 +323,7 @@ def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving
             print('############################################')
             print(f'# Train combination {combination_of_indices} #{combination_cnt} of total {combinations_num}')
             print('############################################')
-            create_and_train_moodel(config_dict, path_to_experiment_saving_dir)
+            create_and_train_moodel(config_dict, path_to_experiment_saving_dir, task='seismic_sensors')
             combination_cnt += 1
 
 def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
@@ -294,7 +376,7 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
 
         config_dict['name_postfix'] = name_postfix
 
-        create_and_train_moodel(config_dict, path_to_experiment_saving_dir)
+        create_and_train_moodel(config_dict, path_to_experiment_saving_dir, task='seismic_sensors')
 
         config_dict['name_postfix'] = init_name_postfix
 
@@ -304,25 +386,29 @@ if __name__ == '__main__':
     parser.add_argument('--paths_to_encoder_configs', nargs='+')
     parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands", "investigate_bands_instride"')
     parser.add_argument('--path_to_saving_dir')
+    parser.add_argument('--task')
 
     sample_args = [
         '--paths_to_model_configs',
         #'training_configs/models/unet++.yaml',
         #'training_configs/models/fpn.yaml',
         #'training_configs/models/fcn.yaml',
-        'training_configs/models/fcn1.yaml',
+        #'training_configs/models/fcn1.yaml',
         #'training_configs/models/unet.yaml',
+        'training_configs/models/unet_hsi.yaml',
 
         '--paths_to_encoder_configs',
         #'training_configs/encoders/tu-maxvit_tiny.yaml',
-        'training_configs/encoders/efficientnet-b2.yaml',
-        #'training_configs/encoders/tu-cspdarknet53.yaml',
+        #'training_configs/encoders/efficientnet-b2.yaml',
+        'training_configs/encoders/tu-cspdarknet53.yaml',
         #'training_configs/encoders/tu-mobilenetv4_hybrid_medium.yaml',
         #'training_configs/encoders/densenet121.yaml',
         #'training_configs/encoders/tu-seresnext50_32x4d.yaml',
         
-        '--training_mode', 'investigate_bands_instride',
-        '--path_to_saving_dir', 'saving_dir'
+        '--training_mode', 'single_nn',
+        '--path_to_saving_dir', 'saving_dir',
+        '--task', 'hsi_uav'
+        
     ]
     args = parser.parse_args(sample_args)
     #print(args)
@@ -330,15 +416,29 @@ if __name__ == '__main__':
     paths_to_encoder_configs = args.paths_to_encoder_configs
     training_mode = args.training_mode
     path_to_saving_dir = args.path_to_saving_dir
+    task = args.task
     
-    if training_mode == 'train_nns':
+    if training_mode == 'single_nn':
+        
         for path_to_model_config in paths_to_model_configs:
             with open(path_to_model_config) as fd:
                 if path_to_model_config.endswith('.yaml'):
                     config_dict = yaml.load(fd, Loader=yaml.Loader)
                 elif path_to_model_config.endswith('.json'):
                     config_dict = json.load(fd)
-            create_and_train_moodel(config_dict, path_to_saving_dir)
+
+            for path_to_encoder_config in paths_to_encoder_configs:
+                current_model_config = deepcopy(config_dict)
+                with open(path_to_encoder_config) as fd:
+                    if path_to_encoder_config.endswith('.yaml'):
+                        encoder_dict = yaml.load(fd, Loader=yaml.Loader)
+                    elif path_to_encoder_config.endswith('.json'):
+                        encoder_dict = json.load(fd)
+
+                current_model_config['segmentation_nn']['input_layer_config'] = encoder_dict['input_layer_config']
+
+                current_model_config['segmentation_nn']['params'].update(encoder_dict['model_params'])
+                create_and_train_moodel(current_model_config, path_to_saving_dir, task=task)
 
     elif training_mode == 'investigate_bands_instride':
         for path_to_model_config in paths_to_model_configs:
@@ -360,9 +460,7 @@ if __name__ == '__main__':
                 current_model_config['segmentation_nn']['input_layer_config'] = encoder_dict['input_layer_config']
 
                 current_model_config['segmentation_nn']['params'].update(encoder_dict['model_params'])
-                #print()
-                #print(current_model_config)
-                #print()
+                
 
                 investigate_bands_instride_pretrained(current_model_config, path_to_saving_dir)
 

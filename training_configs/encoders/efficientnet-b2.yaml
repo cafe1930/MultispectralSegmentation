@@ -11,4 +11,4 @@ input_layer_config:
     weight_update_type: average_all
 model_params:
     encoder_name: efficientnet-b2
-    encoder_weights: imagenet
+    encoder_weights: null

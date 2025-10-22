@@ -207,7 +207,6 @@ class ConvMSABlock(nn.Module):
         #print(x.shape)
         y = self.out_conv(x)
         return x + y
-    
 
 class ConvCrossAttentionBlock(nn.Module):
     '''
@@ -319,8 +318,6 @@ class FixedSizeLearnableEmbeddings(nn.Module):
     def forward(self,x):
         return x + self.positional_encoding
 
-
-
 class LazyWindowVisionTransformerBlocks(nn.Module):
     def __init__(
             self,
@@ -425,7 +422,6 @@ class LazyWindowVisionTransformerBlocks(nn.Module):
             **rearrange_args,
         )
 
-
         return windows_outs
     
 class ConcatDim1(nn.Module):
@@ -452,7 +448,6 @@ unet_attention_factory_dict = {
     'none': nn.Identity,
 }
     
-
 class UnetAtt(SegmentationModel):
     """
     U-Net is a fully convolutional neural network architecture designed for semantic image segmentation.
@@ -727,8 +722,6 @@ class UnetDecoderBlockAtt(nn.Module):
         feature_map = self.conv_layers(feature_map)
         feature_map = self.attention2(feature_map)
         return feature_map
-    
-    
 
 class UnetDecoderAtt(nn.Module):
     """The decoder part of the U-Net architecture.
