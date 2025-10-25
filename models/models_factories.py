@@ -33,6 +33,7 @@ from .fcn1 import FCN1
 from .fpn import FPNMod
 from .unet_pp import UnetPlusPlusMod
 from .att_unet import UnetAtt, ConcatDim1, ConvCrossAttentionBlock, ConvMSABlock
+from .unet_aux_tr import UnetAuxAtt
 
 from .losses import DiceCELoss
 
@@ -108,6 +109,7 @@ transforms_factory_dict = {
 segmentation_nns_factory_dict = {
     'unet': smp.Unet,
     'att_unet': UnetAtt,
+    'unet_aux_att': UnetAuxAtt,
     'fpn': smp.FPN,
     'custom_fpn': FPNMod,
     'unet++': UnetPlusPlusMod,

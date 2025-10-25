@@ -1,0 +1,131 @@
+batch_size: 16
+device: cuda:0
+epoch_num: 300
+input_image_size: 96
+loss:
+    params:
+        ignore_index: -100
+        label_smoothing: 0.15
+        reduction: mean
+        weight: null
+    type: crossentropy
+lr_scheduler:
+    args:
+        T_0: 25
+        T_mult: 1
+        eta_min: 0
+        last_epoch: -1
+    params:
+        frequency: 1
+        interval: epoch
+        monitor: val_loss
+        name: null
+        strict: true
+    type: cosine_warm_restarts
+monitoring_metric: accuracy
+multispecter_bands_indices: 200
+name_postfix: HSI
+optimizer:
+    args: {}
+    type: adam
+#path_to_dataset_root: /home/debian/develop/mikhail_u/UAV-HSI-Crop-Dataset
+path_to_dataset_root: C:\Users\mokhail\develop\DATA\UAV-HSI-Crop-Dataset
+#path_to_dataset_root: /home/mikhail_u/develop/DATA/UAV-HSI-Crop-Dataset
+segmentation_nn:
+    input_layer_config: {}
+    nn_architecture: unet_aux_att
+    params:
+        activation: null
+        aux_params: null
+        aux_transformer_config:
+            hsi_augmentation:
+                layer: add
+                params: {}
+            input_transformer:
+                layer: win_mha
+                params:
+                    channels: 200
+                    cols_in_patch: 12
+                    dropout: 0.2
+                    layer_num: 3
+                    mlp_dim: 576
+                    num_heads: 12
+                    positional_encoding: fixed_embeddings
+                    rows_in_patch: 12
+                    transformer_type: channels
+            intermediate_layers:
+                layer: win_mha
+                params:
+                    channels: 200
+                    cols_in_patch: 12
+                    dropout: 0.2
+                    layer_num: 3
+                    mlp_dim: 576
+                    num_heads: 12
+                    positional_encoding: none
+                    rows_in_patch: 12
+                    transformer_type: channels
+            output_crossatt:
+                layer: crossatt
+                params:
+                    channels_x: 30
+                    channels_y: 200
+                    cols_in_patch_x: 12
+                    cols_in_patch_y: 12
+                    dropout: 0.2
+                    mlp_dim: 576
+                    num_heads: 12
+                    positional_encoding_x: fixed_embeddings
+                    positional_encoding_y: none
+                    rows_in_patch_x: 12
+                    rows_in_patch_y: 12
+                    transformer_type: channels
+            output_layer:
+                layer: &id001 !!python/name:torch.nn.modules.conv.Conv2d ''
+                params:
+                    in_channels: 30
+                    kernel_size: 1
+                    out_channels: 30
+                    padding: 0
+                    stride: 1
+            patch_emd:
+                layer: *id001
+                params:
+                    groups: 200
+                    in_channels: 200
+                    kernel_size: 3
+                    out_channels: 200
+                    padding: 1
+                    stride: 1
+        classes: 30
+        decoder_attention_type: null
+        decoder_channels: !!python/tuple
+        - 256
+        - 128
+        - 128
+        - 64
+        - 64
+        decoder_interpolation: nearest
+        decoder_use_norm: batchnorm
+        encoder_depth: 5
+        in_channels: 3
+train_augmentations:
+    affine:
+        degrees:
+        - 0
+        - 45
+        fill:
+        - 0
+        scale:
+        - 0.7
+        - 1.5
+        shear:
+        - 0
+        - 0.2
+        translate:
+        - 0
+        - 0.3
+    horizontal_flip:
+        p: 0.5
+    vertical_flip:
+        p: 0.5

@@ -1,0 +1,59 @@
+hsi_augmentation:
+    layer: add
+    params: {}
+input_transformer:
+    layer: win_mha
+    params:
+        channels: 200
+        cols_in_patch: 12
+        dropout: 0.2
+        layer_num: 3
+        mlp_dim: 576
+        num_heads: 12
+        positional_encoding: fixed_embeddings
+        rows_in_patch: 12
+        transformer_type: channels
+intermediate_layers:
+    layer: win_mha
+    params:
+        channels: 200
+        cols_in_patch: 12
+        dropout: 0.2
+        layer_num: 3
+        mlp_dim: 576
+        num_heads: 12
+        positional_encoding: none
+        rows_in_patch: 12
+        transformer_type: channels
+output_crossatt:
+    layer: crossatt
+    params:
+        channels_x: 30
+        channels_y: 200
+        cols_in_patch_x: 12
+        cols_in_patch_y: 12
+        dropout: 0.2
+        mlp_dim: 576
+        num_heads: 12
+        positional_encoding_x: fixed_embeddings
+        positional_encoding_y: none
+        rows_in_patch_x: 12
+        rows_in_patch_y: 12
+        transformer_type: channels
+output_layer:
+    layer: &id001 !!python/name:torch.nn.modules.conv.Conv2d ''
+    params:
+        in_channels: 30
+        kernel_size: 1
+        out_channels: 30
+        padding: 0
+        stride: 1
+patch_emd:
+    layer: *id001
+    params:
+        groups: 200
+        in_channels: 200
+        kernel_size: 3
+        out_channels: 200
+        padding: 1
+        stride: 1
