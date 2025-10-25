@@ -403,8 +403,8 @@ if __name__ == '__main__':
         #'training_configs/models/fcn.yaml',
         #'training_configs/models/fcn1.yaml',
         #'training_configs/models/unet.yaml',
-        'training_configs/models/unet_hsi.yaml',
-        #'training_configs/models/unet_aux_tr_hsi.yaml',
+        #'training_configs/models/unet_hsi.yaml',
+        'training_configs/models/unet_aux_tr_hsi.yaml',
 
         '--paths_to_encoder_configs',
         #'training_configs/encoders/tu-maxvit_tiny.yaml',

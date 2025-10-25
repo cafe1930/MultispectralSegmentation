@@ -39,8 +39,9 @@ segmentation_nn:
         aux_params: null
         aux_transformer_config:
             hsi_augmentation:
-                layer: add
-                params: {}
+                layer: pass_one
+                params:
+                    passing_idx: 0
             input_transformer:
                 layer: win_mha
                 params:
@@ -71,14 +72,14 @@ segmentation_nn:
                     channels_x: 30
                     channels_y: 200
                     cols_in_patch_x: 12
-                    cols_in_patch_y: 12
+                    cols_in_patch_y: 3 #!!!
                     dropout: 0.2
                     mlp_dim: 576
                     num_heads: 12
                     positional_encoding_x: fixed_embeddings
                     positional_encoding_y: none
                     rows_in_patch_x: 12
-                    rows_in_patch_y: 12
+                    rows_in_patch_y: 3
                     transformer_type: channels
             output_layer:
                 layer: &id001 !!python/name:torch.nn.modules.conv.Conv2d ''
@@ -93,18 +94,18 @@ segmentation_nn:
                 params:
                     groups: 200
                     in_channels: 200
-                    kernel_size: 3
+                    kernel_size: 4
                     out_channels: 200
-                    padding: 1
-                    stride: 1
+                    padding: 0
+                    stride: 4
         classes: 30
         decoder_attention_type: null
         decoder_channels: !!python/tuple
         - 256
         - 128
-        - 128
         - 64
-        - 64
+        - 32
+        - 32
         decoder_interpolation: nearest
         decoder_use_norm: batchnorm
         encoder_depth: 5

@@ -113,10 +113,10 @@ class VisionTransformerBlock(nn.Module):
 
         else:
             y = self.ln_12(source)
-            #print(x.shape, y.shape)
+
             # Cross Attention
             x, weights = self.self_attention(query=x, key=y, value=y, average_attn_weights=False, need_weights=need_weghts)
-        #print(x.shape)
+
         x = self.dropout(x)
         x = x + target
 
@@ -153,7 +153,7 @@ class WindowVisionTransformer(nn.Module):
             self.seq_len = cols_in_patch * rows_in_patch
             hidden_dim = channels
 
-        #print(self.seq_len, hidden_dim)
+
         
         self.positional_encoding = positional_encoding(num_embeddings=self.seq_len, embedding_dim=hidden_dim)
         # можно создать несколько трансформерных слоев
@@ -172,6 +172,7 @@ class WindowVisionTransformer(nn.Module):
         
     def forward(self, x):
         bs, channels, rows, cols = x.shape
+
         row_patch_num = rows//self.rows_in_patch
         col_patch_num = cols//self.cols_in_patch
         # размер (bs, channels, rows, cols) преобразовываем в размер (row_patches*col_patches, bs, channels, rows_in_patch*cols_in_patch)
@@ -271,7 +272,6 @@ class WindowCrossAttention(nn.Module):
             self.seq_len_y = cols_in_patch_y * rows_in_patch_y
             hidden_dim_y = channels_y
 
-        #print(self.seq_len, hidden_dim)
         
         self.positional_encoding_x = positional_encoding_x(num_embeddings=self.seq_len_x, embedding_dim=hidden_dim_x)
         self.positional_encoding_y = positional_encoding_x(num_embeddings=self.seq_len_y, embedding_dim=hidden_dim_y)
@@ -382,7 +382,7 @@ class HyperspectralTransformer(nn.Module):
         self.patch_emd = config['patch_emd']['layer'](**config['patch_emd']['params'])
         transformer_layers = {}
         for i, transformer_layer_config in enumerate(config['transformer_layers']):
-            #print(transformer_layer_config['params'])
+
             if transformer_layer_config['layer'] == 'crossatt':
                 transformer_layer_config['params']['positional_encoding_x'] = pos_enc_factory_dict[transformer_layer_config['params']['positional_encoding_x']]
                 transformer_layer_config['params']['positional_encoding_y'] = pos_enc_factory_dict[transformer_layer_config['params']['positional_encoding_y']]
@@ -667,6 +667,7 @@ class UnetAuxAtt(SegmentationModel):
         """Sequentially pass `x` trough model`s encoder, decoder and heads"""
 
         aug_x = self.aux_transf['patch_emd'](x)
+        
         aug_x = self.aux_transf['input_transformer'](aug_x)
 
         x = self.aux_transf['hsi_augmentation'](x, aug_x)
