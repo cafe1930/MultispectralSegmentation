@@ -44,9 +44,9 @@ segmentation_nn:
         decoder_channels: !!python/tuple
         - 256
         - 128
-        - 128
         - 64
-        - 64
+        - 32
+        - 32
         decoder_interpolation: nearest
         decoder_use_norm: batchnorm
         encoder_depth: 5

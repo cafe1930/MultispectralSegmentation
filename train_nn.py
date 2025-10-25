@@ -155,16 +155,24 @@ def create_hsi_uav_metrics(class_name2idx_dict, device):
     metrics_dict = {
         'train': {
             'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'micro_avg_iou': classification.JaccardIndex(task='multiclass', average='micro', num_classes=len(class_name2idx_dict)).to(device),
             'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'micro_avg_precision': classification.Precision(task='multiclass', average='micro', num_classes=len(class_name2idx_dict)).to(device),
             'recall': classification.Recall(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'micro_avg_recall': classification.Recall(task='multiclass', average='micro', num_classes=len(class_name2idx_dict)).to(device),
             'accuracy':  classification.Accuracy(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
+            'macro_avg_acc':  classification.Accuracy(task='multiclass', average='macro', num_classes=len(class_name2idx_dict)).to(device),
             'kappa': classification.CohenKappa(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
             'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
         },
         'val': {
             'iou': classification.JaccardIndex(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'micro_avg_iou': classification.JaccardIndex(task='multiclass', average='micro', num_classes=len(class_name2idx_dict)).to(device),
             'precision': classification.Precision(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'micro_avg_precision': classification.Precision(task='multiclass', average='micro', num_classes=len(class_name2idx_dict)).to(device),
             'recall': classification.Recall(task='multiclass', average='none', num_classes=len(class_name2idx_dict)).to(device),
+            'micro_avg_recall': classification.Recall(task='multiclass', average='micro', num_classes=len(class_name2idx_dict)).to(device),
+            'macro_avg_acc':  classification.Accuracy(task='multiclass', average='macro', num_classes=len(class_name2idx_dict)).to(device),
             'accuracy':  classification.Accuracy(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
             'kappa': classification.CohenKappa(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
             'confusion': classification.ConfusionMatrix(task='multiclass', num_classes=len(class_name2idx_dict)).to(device),
@@ -395,7 +403,8 @@ if __name__ == '__main__':
         #'training_configs/models/fcn.yaml',
         #'training_configs/models/fcn1.yaml',
         #'training_configs/models/unet.yaml',
-        'training_configs/models/unet_aux_tr_hsi.yaml',
+        'training_configs/models/unet_hsi.yaml',
+        #'training_configs/models/unet_aux_tr_hsi.yaml',
 
         '--paths_to_encoder_configs',
         #'training_configs/encoders/tu-maxvit_tiny.yaml',
@@ -408,7 +417,6 @@ if __name__ == '__main__':
         '--training_mode', 'single_nn',
         '--path_to_saving_dir', 'saving_dir',
         '--task', 'hsi_uav'
-        
     ]
     args = parser.parse_args(sample_args)
     #print(args)

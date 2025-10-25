@@ -108,7 +108,8 @@ class LightningSegmentationModule(L.LightningModule):
                         confusion_matrix=metric_val.cpu().tolist(),
                         class_names=class_names,
                         mode=mode)
-            elif 'accuracy' in metric_name.lower() or 'kappa' in metric_name.lower():
+            #elif 'accuracy' in metric_name.lower() or 'kappa' in metric_name.lower():
+            elif any([n in metric_name.lower() for n in ['accuracy', 'kappa', 'micro', 'macro']]):
                 #print('-----------------------------')
                 #print(f'{metric_name}={metric_val}')
                 #print('-----------------------------')
