@@ -1,6 +1,6 @@
 batch_size: 16
 device: cuda:0
-epoch_num: 300
+epoch_num: 400
 input_image_size: 96
 loss:
     params:
@@ -24,7 +24,7 @@ lr_scheduler:
     type: cosine_warm_restarts
 monitoring_metric: accuracy
 multispecter_bands_indices: 200
-name_postfix: HSI
+name_postfix: HSI_ptch
 optimizer:
     args: {}
     type: adam
@@ -48,24 +48,24 @@ segmentation_nn:
                     channels: 200
                     cols_in_patch: 12
                     dropout: 0.2
-                    layer_num: 3
-                    mlp_dim: 576
-                    num_heads: 12
+                    layer_num: 2
+                    mlp_dim: 800 # 576
+                    num_heads: 10 # 12
                     positional_encoding: fixed_embeddings
                     rows_in_patch: 12
-                    transformer_type: channels
+                    transformer_type: patches
             intermediate_layers:
                 layer: win_mha
                 params:
                     channels: 200
                     cols_in_patch: 12
                     dropout: 0.2
-                    layer_num: 3
-                    mlp_dim: 576
-                    num_heads: 12
+                    layer_num: 2
+                    mlp_dim: 800 # 576
+                    num_heads: 10 # 12
                     positional_encoding: none
                     rows_in_patch: 12
-                    transformer_type: channels
+                    transformer_type: patches
             output_crossatt:
                 layer: crossatt
                 params:
@@ -74,13 +74,13 @@ segmentation_nn:
                     cols_in_patch_x: 12
                     cols_in_patch_y: 3 #!!!
                     dropout: 0.2
-                    mlp_dim: 576
-                    num_heads: 12
+                    mlp_dim: 800 # 576
+                    num_heads: 10 # 12
                     positional_encoding_x: fixed_embeddings
                     positional_encoding_y: none
                     rows_in_patch_x: 12
                     rows_in_patch_y: 3
-                    transformer_type: channels
+                    transformer_type: patches
             output_layer:
                 layer: &id001 !!python/name:torch.nn.modules.conv.Conv2d ''
                 params:
