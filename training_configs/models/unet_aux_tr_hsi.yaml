@@ -24,7 +24,7 @@ lr_scheduler:
     type: cosine_warm_restarts
 monitoring_metric: accuracy
 multispecter_bands_indices: 200
-name_postfix: HSI_ptch
+name_postfix: HSI_crossatt
 optimizer:
     args: {}
     type: adam
@@ -39,9 +39,20 @@ segmentation_nn:
         aux_params: null
         aux_transformer_config:
             hsi_augmentation:
-                layer: pass_one
+                layer: crossatt
                 params:
-                    passing_idx: 0
+                    channels_x: 200
+                    channels_y: 200
+                    cols_in_patch_x: 12
+                    cols_in_patch_y: 3 #!!!
+                    dropout: 0.2
+                    mlp_dim: 576 # 576
+                    num_heads: 12 # 12
+                    positional_encoding_x: fixed_embeddings
+                    positional_encoding_y: none
+                    rows_in_patch_x: 12
+                    rows_in_patch_y: 3
+                    transformer_type: channels
             input_transformer:
                 layer: win_mha
                 params:
@@ -49,11 +60,11 @@ segmentation_nn:
                     cols_in_patch: 12
                     dropout: 0.2
                     layer_num: 2
-                    mlp_dim: 800 # 576
-                    num_heads: 10 # 12
-                    positional_encoding: fixed_embeddings
+                    mlp_dim: 576 # 576
+                    num_heads: 12 # 12
+                    positional_encoding: none
                     rows_in_patch: 12
-                    transformer_type: patches
+                    transformer_type: channels
             intermediate_layers:
                 layer: win_mha
                 params:
@@ -61,11 +72,11 @@ segmentation_nn:
                     cols_in_patch: 12
                     dropout: 0.2
                     layer_num: 2
-                    mlp_dim: 800 # 576
-                    num_heads: 10 # 12
+                    mlp_dim: 576 # 576
+                    num_heads: 12 # 12
                     positional_encoding: none
                     rows_in_patch: 12
-                    transformer_type: patches
+                    transformer_type: channels
             output_crossatt:
                 layer: crossatt
                 params:
@@ -74,13 +85,13 @@ segmentation_nn:
                     cols_in_patch_x: 12
                     cols_in_patch_y: 3 #!!!
                     dropout: 0.2
-                    mlp_dim: 800 # 576
-                    num_heads: 10 # 12
+                    mlp_dim: 576 # 576
+                    num_heads: 12 # 12
                     positional_encoding_x: fixed_embeddings
                     positional_encoding_y: none
                     rows_in_patch_x: 12
                     rows_in_patch_y: 3
-                    transformer_type: patches
+                    transformer_type: channels
             output_layer:
                 layer: &id001 !!python/name:torch.nn.modules.conv.Conv2d ''
                 params:

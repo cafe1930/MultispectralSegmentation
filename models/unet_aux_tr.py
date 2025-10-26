@@ -274,7 +274,7 @@ class WindowCrossAttention(nn.Module):
 
         
         self.positional_encoding_x = positional_encoding_x(num_embeddings=self.seq_len_x, embedding_dim=hidden_dim_x)
-        self.positional_encoding_y = positional_encoding_x(num_embeddings=self.seq_len_y, embedding_dim=hidden_dim_y)
+        self.positional_encoding_y = positional_encoding_y(num_embeddings=self.seq_len_y, embedding_dim=hidden_dim_y)
         # можно создать несколько трансформерных слоев
         self.cross_attention_block = VisionTransformerBlock(
             num_heads=num_heads,
@@ -641,17 +641,21 @@ class UnetAuxAtt(SegmentationModel):
             )
         else:
             self.classification_head = None
-
+        #print(aux_transformer_config['input_transformer']['params'])
         aux_transformer_config['output_crossatt']['params']['positional_encoding_x'] = pos_enc_factory_dict[aux_transformer_config['output_crossatt']['params']['positional_encoding_x']]
         aux_transformer_config['output_crossatt']['params']['positional_encoding_y'] = pos_enc_factory_dict[aux_transformer_config['output_crossatt']['params']['positional_encoding_y']]
         aux_transformer_config['input_transformer']['params']['positional_encoding'] = pos_enc_factory_dict[aux_transformer_config['input_transformer']['params']['positional_encoding']]
         aux_transformer_config['intermediate_layers']['params']['positional_encoding'] = pos_enc_factory_dict[aux_transformer_config['intermediate_layers']['params']['positional_encoding']]
         #config['hsi_augmentation']['layer'] = feature_aggregation_factory_dict['hsi_augmentation']['layer']
-
+        if aux_transformer_config['hsi_augmentation']['layer'] == 'crossatt':
+            aux_transformer_config['hsi_augmentation']['params']['positional_encoding_x'] = pos_enc_factory_dict[aux_transformer_config['hsi_augmentation']['params']['positional_encoding_x']]
+            aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y'] = pos_enc_factory_dict[aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y']]
 
         self.aux_transf = nn.ModuleDict()
         self.aux_transf['patch_emd'] = aux_transformer_config['patch_emd']['layer'](**aux_transformer_config['patch_emd']['params'])
         layer_name = aux_transformer_config['input_transformer']['layer']
+        #print(aux_transformer_config['input_transformer']['params'])
+        #print()
         self.aux_transf['input_transformer'] = transformer_factory_dict[layer_name](**aux_transformer_config['input_transformer']['params'])
         self.aux_transf['hsi_augmentation'] = feature_aggregation_factory_dict[aux_transformer_config['hsi_augmentation']['layer']](**aux_transformer_config['hsi_augmentation']['params'])
         layer_name = aux_transformer_config['intermediate_layers']['layer']
