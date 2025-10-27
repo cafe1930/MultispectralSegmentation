@@ -31,7 +31,7 @@ optimizer:
 #path_to_dataset_root: /home/debian/develop/mikhail_u/UAV-HSI-Crop-Dataset
 #path_to_dataset_root: C:\Users\mokhail\develop\DATA\UAV-HSI-Crop-Dataset
 path_to_dataset_root: C:\Users\admin\python_programming\DATA\UAV-HSI-Crop-Dataset
-#path_to_dataset_root: /home/mikhail_u/develop/DATA/UAV-HSI-Crop-Dataset
+#path_to_dataset_root: /home/mikhail_u/develop/hyperspectral_nns/UAV-HSI-Crop-Dataset
 segmentation_nn:
     input_layer_config: {}
     nn_architecture: unet_aux_att
