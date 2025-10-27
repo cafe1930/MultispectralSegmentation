@@ -1,6 +1,6 @@
-batch_size: 16
+batch_size: 1
 device: cuda:0
-epoch_num: 400
+epoch_num: 2
 input_image_size: 96
 loss:
     params:
@@ -24,12 +24,13 @@ lr_scheduler:
     type: cosine_warm_restarts
 monitoring_metric: accuracy
 multispecter_bands_indices: 200
-name_postfix: HSI_crossatt
+name_postfix: HSI_chatt
 optimizer:
     args: {}
     type: adam
 #path_to_dataset_root: /home/debian/develop/mikhail_u/UAV-HSI-Crop-Dataset
-path_to_dataset_root: C:\Users\mokhail\develop\DATA\UAV-HSI-Crop-Dataset
+#path_to_dataset_root: C:\Users\mokhail\develop\DATA\UAV-HSI-Crop-Dataset
+path_to_dataset_root: C:\Users\admin\python_programming\DATA\UAV-HSI-Crop-Dataset
 #path_to_dataset_root: /home/mikhail_u/develop/DATA/UAV-HSI-Crop-Dataset
 segmentation_nn:
     input_layer_config: {}
@@ -39,20 +40,12 @@ segmentation_nn:
         aux_params: null
         aux_transformer_config:
             hsi_augmentation:
-                layer: crossatt
+                layer: channel_att
                 params:
-                    channels_x: 200
-                    channels_y: 200
-                    cols_in_patch_x: 12
-                    cols_in_patch_y: 3 #!!!
-                    dropout: 0.2
-                    mlp_dim: 576 # 576
-                    num_heads: 12 # 12
-                    positional_encoding_x: fixed_embeddings
-                    positional_encoding_y: none
-                    rows_in_patch_x: 12
-                    rows_in_patch_y: 3
-                    transformer_type: channels
+                    in_channels: 200
+                    out_channels: 200
+                    kernel_size: 3
+                    padding: 1 #!!!
             input_transformer:
                 layer: win_mha
                 params:

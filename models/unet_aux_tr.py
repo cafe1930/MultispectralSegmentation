@@ -67,6 +67,36 @@ class FixedSizeLearnableEmbeddings(nn.Module):
     def forward(self,x):
         return x + self.positional_encoding
 
+class ComputeWeights(nn.Sequential):
+    def __init__(self, in_channels, out_channels, kernel_size, padding):
+        mod_lst = []
+        mod_lst.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=padding))
+        mod_lst.append(nn.Sigmoid())
+        super().__init__(*mod_lst)
+        
+
+class ChannelAtt(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel_size, padding):
+        super().__init__()
+        self.in2_proj = ComputeWeights(in_channels, out_channels, kernel_size, padding)
+
+    def forward(self, in1, in2):
+        #print(in1.shape, in2.shape)
+        weights = self.in2_proj(in2)
+        bs, ch1, rows1, cols1 = in1.shape
+        bs, ch2, rows2, cols2 = weights.shape
+        winr = rows1//rows2
+        winc = cols1//cols2
+
+        weights = weights.view(bs, ch2, rows2, cols2, 1, 1)
+
+        in1 = eo.rearrange(in1, 'b ch (rn wr) (cn wc) -> b ch rn cn wr wc', rn=rows2, cn=cols2, wr=winr, wc=winc)
+
+        in1 = in1*weights
+
+        in1 = eo.rearrange(in1, 'b ch rn cn wr wc -> b ch (rn wr) (cn wc)', rn=rows2, cn=cols2, wr=winr, wc=winc)
+        return in1
+
 class VisionTransformerBlock(nn.Module):
     def __init__(
             self,
@@ -489,7 +519,8 @@ feature_aggregation_factory_dict ={
     'add': AddFeatures,
     'pass_one': PassOneFeature,
     'concat': ConcatFeatures,
-    'crossatt': WindowCrossAttention
+    'crossatt': WindowCrossAttention,
+    'channel_att': ChannelAtt,
 }
 
 class UnetAuxAtt(SegmentationModel):
