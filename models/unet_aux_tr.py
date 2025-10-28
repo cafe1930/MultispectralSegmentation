@@ -183,8 +183,6 @@ class WindowVisionTransformer(nn.Module):
             self.seq_len = cols_in_patch * rows_in_patch
             hidden_dim = channels
 
-
-        
         self.positional_encoding = positional_encoding(num_embeddings=self.seq_len, embedding_dim=hidden_dim)
         # можно создать несколько трансформерных слоев
         transformer_layers_list = [
