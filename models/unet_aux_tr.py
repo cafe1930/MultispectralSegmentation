@@ -9,11 +9,16 @@ from segmentation_models_pytorch.base import (
     SegmentationHead,
     SegmentationModel,
 )
+import timm
 from segmentation_models_pytorch.decoders.unet.decoder import UnetDecoder
 from segmentation_models_pytorch.encoders import get_encoder
 from segmentation_models_pytorch.base.hub_mixin import supports_config_loading
 from typing import Any, Dict, Optional, Union, Callable, Sequence, List
 import einops as eo
+
+import numpy as np
+
+from torchvision import ops
 
 from functools import partial
 from torchvision.models.vision_transformer import EncoderBlock as VitEncoderBlock, MLPBlock
@@ -67,18 +72,21 @@ class FixedSizeLearnableEmbeddings(nn.Module):
     def forward(self,x):
         return x + self.positional_encoding
 
-class ComputeWeights(nn.Sequential):
+class ComputePatchedWeights(nn.Sequential):
     def __init__(self, in_channels, out_channels, kernel_size, padding):
-        mod_lst = []
-        mod_lst.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=padding))
-        mod_lst.append(nn.Sigmoid())
+        mod_lst = [
+            #mod_lst.append(nn.Conv2d(in_channels=in_channels, out_channels=out_channels, kernel_size=kernel_size, padding=padding))
+            #mod_lst.append(nn.Sigmoid())
+            ops.Conv2dNormActivation(in_channels=in_channels,out_channels=in_channels//4, kernel_size=kernel_size, padding=padding),
+            ops.Conv2dNormActivation(in_channels=in_channels//4,out_channels=out_channels, kernel_size=kernel_size, padding=padding, norm_layer=None, activation_layer=None),
+            nn.Sigmoid(),
+        ]
         super().__init__(*mod_lst)
         
-
-class ChannelAtt(nn.Module):
+class PatchAtt(nn.Module):
     def __init__(self, in_channels, out_channels, kernel_size, padding):
         super().__init__()
-        self.in2_proj = ComputeWeights(in_channels, out_channels, kernel_size, padding)
+        self.in2_proj = ComputePatchedWeights(in_channels, out_channels, kernel_size, padding)
 
     def forward(self, in1, in2):
         #print(in1.shape, in2.shape)
@@ -96,6 +104,114 @@ class ChannelAtt(nn.Module):
 
         in1 = eo.rearrange(in1, 'b ch rn cn wr wc -> b ch (rn wr) (cn wc)', rn=rows2, cn=cols2, wr=winr, wc=winc)
         return in1
+
+def adapt_csp_blocks(block, in_channels, out_channels, stride, in_repeat_type):
+    conv_weights = block.conv.weight
+    conv_bias = block.conv.bias
+    actual_out_ch = block.conv.out_channels
+    #adapt in
+    if in_repeat_type == 'mean':
+        new_weights = torch.cat([conv_weights.mean(dim=1).unsqueeze(1)]*in_channels, dim=1)
+    elif in_repeat_type == 'repeat':
+        actual_in_channels = block.conv.in_channels
+        chunks = int(np.ceil(in_channels/actual_in_channels))
+        if chunks > 0:
+            new_weights = torch.cat([conv_weights]*chunks, dim=1)
+        new_weights = new_weights[:, :in_channels]
+    # adpat out
+    chunks =  int(np.ceil(out_channels/actual_out_ch))
+    if chunks > 0:
+        new_weights = torch.cat([new_weights]*chunks, dim=0)
+    new_weights = new_weights[:out_channels]
+    new_bias = None
+    if conv_bias is not None:
+        if chunks > 0:
+            new_bias = torch.cat([conv_bias]*chunks, dim=0)
+            new_bias = new_bias[:out_channels]
+        else:
+            new_bias = conv_bias[:out_channels]
+        new_bias = nn.Parameter(new_bias)
+
+    block.conv.in_channels = in_channels
+    block.conv.out_channels = out_channels
+    block.conv.stride = stride
+
+    block.conv.weight = nn.Parameter(new_weights)
+    block.conv.bias = new_bias
+
+    bn_weights = block.bn.weight
+    bn_bias = block.bn.bias
+    new_bn_weights = None
+    if bn_weights is not None:
+        if chunks > 0:
+            new_bn_weights = torch.cat([bn_weights]*chunks, dim=0)
+            new_bn_weights = new_bn_weights[:out_channels]
+        else:
+            new_bn_weights = bn_weights[:out_channels]
+        new_bn_weights = nn.Parameter(new_bn_weights)
+    new_bn_bias = None
+    if bn_bias is not None:
+        if chunks > 0:
+            new_bn_bias = torch.cat([bn_bias]*chunks, dim=0)
+            new_bn_bias = new_bn_bias[:out_channels]
+        else:
+            new_bn_bias = bn_bias[:out_channels]
+        new_bn_bias = nn.Parameter(new_bn_bias)
+
+    bn_running_mean = block.bn.running_mean
+    bn_running_var = block.bn.running_var
+    new_bn_running_mean = None
+    if bn_running_mean is not None:
+        if chunks > 0:
+            new_bn_running_mean = torch.cat([bn_running_mean]*chunks, dim=0)
+            new_bn_running_mean = new_bn_running_mean[:out_channels]
+        else:
+            new_bn_running_mean = bn_running_mean[:out_channels]
+        #new_bn_weights = nn.Parameter(new_bn_weights)
+    new_bn_running_var = None
+    if bn_running_var is not None:
+        if chunks > 0:
+            new_bn_running_var = torch.cat([bn_running_var]*chunks, dim=0)
+            new_bn_running_var = new_bn_running_var[:out_channels]
+        else:
+            new_bn_running_var = bn_running_var[:out_channels]
+        #new_bn_bias = nn.Parameter(new_bn_bias)
+
+    block.bn.num_features = out_channels
+    block.bn.weight = new_bn_weights
+    block.bn.bias = new_bn_bias
+    block.bn.running_mean = new_bn_running_mean
+    block.bn.running_var = new_bn_running_var
+
+    return block
+
+class InputCSP(nn.Sequential):
+    def __init__(self, in_channels, out_channels, in_stride1, in_stride2, pretrained):
+        
+        model = timm.create_model(model_name='cspdarknet53', pretrained=pretrained)
+        input_conv1 = model.get_submodule('stem.conv1')
+        input_conv2 = model.get_submodule('stages.0.conv_down')
+
+        
+        input_conv1 = adapt_csp_blocks(input_conv1, in_channels, out_channels, stride=in_stride1, in_repeat_type='mean')
+        input_conv2 = adapt_csp_blocks(input_conv2, in_channels, out_channels, stride=in_stride2, in_repeat_type='repeat')
+        super().__init__(input_conv1, input_conv2)
+
+class ChannelAtt(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super().__init__()
+        self.compute_weights = nn.Sequential(
+            nn.AdaptiveAvgPool2d(1),
+            ops.Conv2dNormActivation(in_channels=in_channels,out_channels=in_channels//4, kernel_size=1, norm_layer=None),
+            ops.Conv2dNormActivation(in_channels=in_channels//4,out_channels=out_channels, kernel_size=1, norm_layer=None, activation_layer=None),
+            nn.Sigmoid(),
+        )
+
+    def forward(self, in1, in2):
+        #print(in1.shape, in2.shape)
+        weights = self.compute_weights(in2)
+        
+        return in1 * weights
 
 class VisionTransformerBlock(nn.Module):
     def __init__(
@@ -260,7 +376,6 @@ class WindowVisionTransformer(nn.Module):
         )
         return processed_outs
 
-
 class WindowCrossAttention(nn.Module):
     def __init__(
             self,
@@ -322,8 +437,6 @@ class WindowCrossAttention(nn.Module):
         bs, channels, rows_y, cols_y = y.shape
         row_patch_num_y = rows_y//self.rows_in_patch_y
         col_patch_num_y = cols_y//self.cols_in_patch_y
-
-        
 
         assert row_patch_num_x == row_patch_num_y, f'number of window rows in X={row_patch_num_x} and Y={row_patch_num_y} tensors ought to coinside'
         assert col_patch_num_x == col_patch_num_y, f'number of window cols in X={col_patch_num_x} and Y={col_patch_num_y} tensors ought to coinside'
@@ -519,6 +632,14 @@ feature_aggregation_factory_dict ={
     'concat': ConcatFeatures,
     'crossatt': WindowCrossAttention,
     'channel_att': ChannelAtt,
+    'patch_att': PatchAtt,
+}
+
+patch_emb_factory_dict = {
+    'conv': nn.Conv2d,
+    'input_csp': InputCSP,
+    'none': nn.Identity
+
 }
 
 class UnetAuxAtt(SegmentationModel):
@@ -681,7 +802,9 @@ class UnetAuxAtt(SegmentationModel):
             aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y'] = pos_enc_factory_dict[aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y']]
 
         self.aux_transf = nn.ModuleDict()
-        self.aux_transf['patch_emd'] = aux_transformer_config['patch_emd']['layer'](**aux_transformer_config['patch_emd']['params'])
+        patch_emb_name = aux_transformer_config['patch_emd']['layer']
+        patch_emb_creat = patch_emb_factory_dict[patch_emb_name]
+        self.aux_transf['patch_emd'] = patch_emb_creat(**aux_transformer_config['patch_emd']['params'])
         layer_name = aux_transformer_config['input_transformer']['layer']
         #print(aux_transformer_config['input_transformer']['params'])
         #print()
