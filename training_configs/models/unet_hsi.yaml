@@ -1,6 +1,6 @@
-batch_size: 16
+batch_size: 12
 device: cuda:0
-epoch_num: 300
+epoch_num: 400
 input_image_size: 96
 loss:
     params:
