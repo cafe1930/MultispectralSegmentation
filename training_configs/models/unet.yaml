@@ -1,6 +1,7 @@
 batch_size: 16
+deterministic_seed: 0
 device: cuda:0
-epoch_num: 300
+epoch_num: 1
 input_image_size: 96
 loss:
     params:
@@ -41,10 +42,10 @@ optimizer:
     args: {}
     type: adam
 #path_to_dataset_root: C:\Users\admin\python_programming\DATA\DATA_FOR_TRAINIG_96
-#path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
+path_to_dataset_root: C:\Users\mokhail\develop\DATA\DATA_FOR_TRAINIG_96
 #path_to_dataset_root: /home/mikhail_u/develop/DATA/DATA_FOR_TRAINIG_96
 #path_to_dataset_root: /home/debian/develop/mikhail_u/DATA_FOR_TRAINIG_96
-path_to_dataset_root: /home/ubuntu/develop/mikhail_u/DATA/DATA_FOR_TRAINIG_96
+#path_to_dataset_root: /home/ubuntu/develop/mikhail_u/DATA/DATA_FOR_TRAINIG_96
 #path_to_dataset_root: C:\Users\marin\programming\DATA\DATA_FOR_TRAINIG_96
 segmentation_nn:
     input_layer_config: {}

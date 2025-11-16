@@ -2,6 +2,8 @@ import argparse
 from lightning_wrapper import LightningSegmentationModule, CSVLoggerMetricsAndConfusion
 
 import lightning as L
+
+from lightning.pytorch import seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import CSVLogger
 
@@ -9,6 +11,8 @@ from torchmetrics import classification, nominal
 from torchmetrics import segmentation
 
 from copy import deepcopy
+
+import random
 
 import os
 import pandas as pd
@@ -35,6 +39,14 @@ from data import SegmentationDataset, HSI_dataset
 from datetime import datetime
 from itertools import combinations, product
 
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)  # for multi-GPU setups
+
 def create_seismic_sensors_dataset(config_dict):
 
     path_to_dataset_root = config_dict['path_to_dataset_root']
@@ -52,7 +64,11 @@ def create_seismic_sensors_dataset(config_dict):
     # чтение таблицы с информацией о каждом изображении в выборке
     images_df = pd.read_csv(path_to_dataset_info_csv)
 
-    path_to_partition_json = os.path.join(path_to_dataset_root, 'dataset_partition.json')
+    if 'crossval_iteration' in config_dict:
+        partition_name = f'dataset_partition_{config_dict["crossval_iteration"]}.json'
+    else:
+        partition_name = 'dataset_partition.json'
+    path_to_partition_json = os.path.join(path_to_dataset_root, partition_name)
     # чтение словаря со списками квадратов, находящихся в обучающей и тестовой выборке
     with open(path_to_partition_json) as fd:
         partition_dict = json.load(fd)
@@ -81,7 +97,6 @@ def create_seismic_sensors_dataset(config_dict):
     classes_weights = classes_pixels_num / classes_pixels_num.sum()
     classes_weights = classes_weights[surface_classes_list].to_numpy().astype(np.float32)
 
-
     '''
     train_transforms = v2.Compose(
         [v2.Resize((input_image_size,input_image_size), antialias=True),v2.ToDtype(torch.float32, scale=True)])
@@ -94,8 +109,20 @@ def create_seismic_sensors_dataset(config_dict):
         # создаем датасеты и даталоадеры
     train_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=train_images_df, channel_indices=multispecter_bands_indices, transforms=train_transforms, dtype=torch.float32, device=device)
     test_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=test_images_df, channel_indices=multispecter_bands_indices, transforms=test_transforms, dtype=torch.float32, device=device)
-    
-    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config_dict['batch_size'], shuffle=True)
+    generator_params = {}
+    if 'deterministic_seed' in config_dict:
+        def seed_worker(worker_id):
+            worker_seed = torch.initial_seed() % 2**32
+            np.random.seed(worker_seed)
+            random.seed(worker_seed)
+        #g = torch.Generator(device=config_dict['device'])
+        g = torch.Generator()
+        g.manual_seed(config_dict['deterministic_seed']) 
+        generator_params['generator'] = g
+        generator_params['worker_init_fn'] = seed_worker
+
+    #train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config_dict['batch_size'], shuffle=True, **generator_params)
+    train_loader = torch.utils.data.DataLoader(train_dataset, batch_size=config_dict['batch_size'], shuffle=True, **generator_params)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=config_dict['batch_size'])
 
     return train_loader, test_loader, class_name2idx_dict, classes_weights
@@ -131,9 +158,7 @@ def create_hsi_uav_dataset(config_dict):
     class_name2idx_dict = {f'{i}':i  for i in range(30)}
     classes_weights = np.array([1. for c in class_name2idx_dict]).astype(np.float32)
     return train_loader, test_loader, class_name2idx_dict, classes_weights
-
-    
-
+   
 def create_seismic_metrics(class_name2idx_dict, device):
     metrics_dict = {
         'train': {
@@ -181,8 +206,16 @@ def create_hsi_uav_metrics(class_name2idx_dict, device):
     return metrics_dict
     
 
-def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str):
+def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str, crossval_iteration=None):
     t_start = time.time()
+    # детерминированные операции и одинаковые зерна генераторов случайных чисел
+    if 'deterministic_seed' in config_dict:
+        #torch.backends.cudnn.deterministic = True
+        #torch.backends.cudnn.benchmark = False
+        torch.use_deterministic_algorithms(True, warn_only=True)
+
+        set_seed(config_dict['deterministic_seed'])
+
     if config_dict['segmentation_nn']['params']['encoder_weights'] is None:
 
         name_postfix = config_dict['name_postfix']
@@ -221,7 +254,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
     #print(model.encoder)
 
     # тестовое чтение данных
-    for data, labels in test_loader:
+    for data, labels in train_loader:
         break
 
     # тестовая обработка данных нейронной сетью
@@ -233,10 +266,16 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
     nn_arch_str = config_dict["segmentation_nn"]["nn_architecture"]
     nn_encoder_str = config_dict["segmentation_nn"]["params"]["encoder_name"]
     name_postfix = config_dict["name_postfix"]
-    if name_postfix is not None and len(name_postfix) != 0:
-        model_name = f'{nn_arch_str}_{nn_encoder_str}_{name_postfix} {createion_time_str}'
+    if crossval_iteration is None:
+        if name_postfix is not None and len(name_postfix) != 0:
+            model_name = f'{nn_arch_str}_{nn_encoder_str}_{name_postfix} {createion_time_str}'
+        else:
+            model_name = f'{nn_arch_str}_{nn_encoder_str} {createion_time_str}'
     else:
-        model_name = f'{nn_arch_str}_{nn_encoder_str} {createion_time_str}'
+        if name_postfix is not None and len(name_postfix) != 0:
+            model_name = f'{nn_arch_str}_{nn_encoder_str}_{name_postfix}_cv{crossval_iteration} {createion_time_str}'
+        else:
+            model_name = f'{nn_arch_str}_{nn_encoder_str}_cv{crossval_iteration} {createion_time_str}'
 
     epoch_num = config_dict['epoch_num']
 
@@ -283,11 +322,17 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
         dirpath=path_to_save_model_dir, 
         save_top_k=1, monitor=f"val_{monitoring_metric}"
         )
-
+    if 'deterministic_seed' in config_dict:
+        seed_everything(config_dict['deterministic_seed'])
+        #deterministic = 'warn'
+        deterministic = False
+    else:
+        deterministic = False
     trainer = L.Trainer(logger=[csv_logger],
             max_epochs=epoch_num, 
             callbacks=[checkpoint_callback],
-            accelerator = 'gpu'
+            accelerator = 'gpu',
+            deterministic = deterministic
             )
 
     # сохраняем конфигурацию
@@ -296,7 +341,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
         #json.dump(config_dict, fd, indent=4)
         yaml.dump(config_dict, fd, indent=4)
 
-    trainer.fit(segmentation_module , train_loader, test_loader)
+    trainer.fit(segmentation_module , train_loader, test_loader,)
     t_stop = time.time()
 
     elapsed_time = timedelta(seconds=t_stop-t_start)
@@ -334,10 +379,17 @@ def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving
             create_and_train_moodel(config_dict, path_to_experiment_saving_dir, task='seismic_sensors')
             combination_cnt += 1
 
-def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
+def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir, crossval_iteration=None):
+    #print(config_dict)
+    #print('------------------------------------------------------------------------------------------')
+    
     experiment_date = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
-    path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'bands_instride_pretrained', f'experiment_{experiment_date}')
-    os.makedirs(path_to_experiment_saving_dir, exist_ok=True)
+    if crossval_iteration is None:
+        path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'bands_instride_pretrained', f'experiment_{experiment_date}')
+        os.makedirs(path_to_experiment_saving_dir, exist_ok=True)
+    else:
+        path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'bands_instride_pretrained_CV')
+        os.makedirs(path_to_experiment_saving_dir, exist_ok=True)
     bands_combinations_list = [
         ('b_rgb', [1, 2, 3]),
         ('b_10m', [1, 2, 3, 7]),
@@ -370,7 +422,11 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
     combinations_num = len(all_combinations_list)
     for combination_cnt, combination in enumerate(all_combinations_list):
         print('#######################################################')
-        print(f'# Train combination #{combination_cnt+1} of total {combinations_num}')
+        if crossval_iteration is None:
+            print(f'# Train combination #{combination_cnt+1} of total {combinations_num}')
+        else:
+            print(f'# Cross-validation Iteration #{crossval_iteration+1}')
+            print(f'# Train combination #{combination_cnt+1} of total {combinations_num}')
         print('#######################################################')
         name_postfix = init_name_postfix
         for comb_name, comb_val in combination.items():
@@ -384,17 +440,24 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir):
 
         config_dict['name_postfix'] = name_postfix
 
-        create_and_train_moodel(config_dict, path_to_experiment_saving_dir, task='seismic_sensors')
+        create_and_train_moodel(config_dict, path_to_experiment_saving_dir, task='seismic_sensors', crossval_iteration=crossval_iteration)
 
         config_dict['name_postfix'] = init_name_postfix
+
+def seismic_5x2cross_val(cv_config_dict, path_to_saving_dir):
+    for i in range(5):
+        
+        cv_config_dict['crossval_iteration'] = i
+        investigate_bands_instride_pretrained(cv_config_dict, path_to_saving_dir, crossval_iteration=i)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--paths_to_model_configs', nargs='+')
     parser.add_argument('--paths_to_encoder_configs', nargs='+')
-    parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands", "investigate_bands_instride"')
+    parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands", "investigate_bands_instride", "crossval_bands_instride"')
     parser.add_argument('--path_to_saving_dir')
-    parser.add_argument('--task')
+    parser.add_argument('--task', help='Could be `hsi_uav` OR `seismic_sensors`')
 
     sample_args = [
         '--paths_to_model_configs',
@@ -402,22 +465,23 @@ if __name__ == '__main__':
         #'training_configs/models/fpn.yaml',
         #'training_configs/models/fcn.yaml',
         #'training_configs/models/fcn1.yaml',
-        #'training_configs/models/unet.yaml',
-        'training_configs/models/unet_hsi.yaml',
+        'training_configs/models/unet.yaml',
+        #'training_configs/models/unet_hsi.yaml',
         #'training_configs/models/unet_aux_chtr_hsi.yaml',
         #'training_configs/models/unet_aux_patr_hsi.yaml',
 
         '--paths_to_encoder_configs',
         #'training_configs/encoders/tu-maxvit_tiny.yaml',
-        #'training_configs/encoders/efficientnet-b2.yaml',
-        'training_configs/encoders/tu-cspdarknet53.yaml',
+        'training_configs/encoders/efficientnet-b2.yaml',
+        #'training_configs/encoders/tu-cspdarknet53.yaml',
         #'training_configs/encoders/tu-mobilenetv4_hybrid_medium.yaml',
         #'training_configs/encoders/densenet121.yaml',
         #'training_configs/encoders/tu-seresnext50_32x4d.yaml',
         
-        '--training_mode', 'single_nn',
+        '--training_mode', 'crossval_bands_instride',
         '--path_to_saving_dir', 'saving_dir',
-        '--task', 'hsi_uav'
+        '--task', 'seismic_sensors'
+
     ]
     args = parser.parse_args(sample_args)
     #print(args)
@@ -449,7 +513,7 @@ if __name__ == '__main__':
                 current_model_config['segmentation_nn']['params'].update(encoder_dict['model_params'])
                 create_and_train_moodel(current_model_config, path_to_saving_dir, task=task)
 
-    elif training_mode == 'investigate_bands_instride':
+    elif training_mode in ('investigate_bands_instride', 'crossval_bands_instride'):
         for path_to_model_config in paths_to_model_configs:
             with open(path_to_model_config) as fd:
                 if path_to_model_config.endswith('.yaml'):
@@ -469,9 +533,10 @@ if __name__ == '__main__':
                 current_model_config['segmentation_nn']['input_layer_config'] = encoder_dict['input_layer_config']
 
                 current_model_config['segmentation_nn']['params'].update(encoder_dict['model_params'])
-                
-
-                investigate_bands_instride_pretrained(current_model_config, path_to_saving_dir)
+                if training_mode == 'crossval_bands_instride':
+                    seismic_5x2cross_val(current_model_config, path_to_saving_dir)
+                elif training_mode == 'investigate_bands_instride':
+                    investigate_bands_instride_pretrained(current_model_config, path_to_saving_dir)
 
     elif training_mode == 'search_best_bands':
         path_to_config = paths_to_model_configs[0]
