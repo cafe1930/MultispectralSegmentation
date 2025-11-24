@@ -1,7 +1,7 @@
 batch_size: 16
 deterministic_seed: 0
 device: cuda:0
-epoch_num: 1
+epoch_num: 300
 input_image_size: 96
 loss:
     params:

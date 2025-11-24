@@ -212,7 +212,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
     if 'deterministic_seed' in config_dict:
         #torch.backends.cudnn.deterministic = True
         #torch.backends.cudnn.benchmark = False
-        torch.use_deterministic_algorithms(True, warn_only=True)
+        #torch.use_deterministic_algorithms(True, warn_only=True)
 
         set_seed(config_dict['deterministic_seed'])
 
