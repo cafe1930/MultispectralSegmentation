@@ -205,7 +205,6 @@ def create_hsi_uav_metrics(class_name2idx_dict, device):
     }
     return metrics_dict
     
-
 def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str, crossval_iteration=None):
     t_start = time.time()
     # детерминированные операции и одинаковые зерна генераторов случайных чисел
