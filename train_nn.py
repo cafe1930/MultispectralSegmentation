@@ -58,10 +58,10 @@ def create_seismic_sensors_dataset(config_dict):
     multispecter_bands_indices = config_dict['multispecter_bands_indices']
     device = config_dict['device']
 
-    # чтение списка имен классов поверхностей
+    # Read list of surface class names
     with open(path_to_surface_classes_json) as fd:
         surface_classes_list = json.load(fd)
-    # чтение таблицы с информацией о каждом изображении в выборке
+    # Read table with information about each image in the dataset
     images_df = pd.read_csv(path_to_dataset_info_csv)
 
     if 'crossval_iteration' in config_dict:
@@ -69,11 +69,11 @@ def create_seismic_sensors_dataset(config_dict):
     else:
         partition_name = 'dataset_partition.json'
     path_to_partition_json = os.path.join(path_to_dataset_root, partition_name)
-    # чтение словаря со списками квадратов, находящихся в обучающей и тестовой выборке
+    # Read dictionary with lists of squares in training and test sets
     with open(path_to_partition_json) as fd:
         partition_dict = json.load(fd)
 
-    # формирование pandas DataFrame-ов с информацией об изображениях обучающей и тестовой выборках
+    # Create pandas DataFrames with information about images in training and test sets
     train_images_df = []
     for train_square in partition_dict['train_squares']:
         train_images_df.append(images_df[images_df['square_id']==train_square])
@@ -88,10 +88,10 @@ def create_seismic_sensors_dataset(config_dict):
 
     class_num = images_df['class_num'].iloc[0]
 
-    # формирование словаря, отображающейго имя класса поверхности в индекс класса
+    # Create dictionary mapping surface class name to class index
     class_name2idx_dict = {n:i for i, n in enumerate(surface_classes_list)}
 
-    # вычисление распределений пикселей в классах поверхностей 
+    # Calculate pixel distribution across surface classes
     classes_pixels_distribution_df = images_df[surface_classes_list]
     classes_pixels_num = classes_pixels_distribution_df.sum()
     classes_weights = classes_pixels_num / classes_pixels_num.sum()
@@ -106,7 +106,7 @@ def create_seismic_sensors_dataset(config_dict):
     train_transforms = create_augmentation_transforms(config_dict['train_augmentations']) 
     test_transforms = nn.Identity()
 
-        # создаем датасеты и даталоадеры
+        # Create datasets and dataloaders
     train_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=train_images_df, channel_indices=multispecter_bands_indices, transforms=train_transforms, dtype=torch.float32, device=device)
     test_dataset = SegmentationDataset(path_to_dataset_root=path_to_dataset_root, samples_df=test_images_df, channel_indices=multispecter_bands_indices, transforms=test_transforms, dtype=torch.float32, device=device)
     generator_params = {}
@@ -207,7 +207,7 @@ def create_hsi_uav_metrics(class_name2idx_dict, device):
     
 def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str, crossval_iteration=None):
     t_start = time.time()
-    # детерминированные операции и одинаковые зерна генераторов случайных чисел
+    # Deterministic operations and same random generator seeds
     if 'deterministic_seed' in config_dict:
         #torch.backends.cudnn.deterministic = True
         #torch.backends.cudnn.benchmark = False
@@ -219,17 +219,17 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
 
         name_postfix = config_dict['name_postfix']
         config_dict['name_postfix'] = f'{name_postfix}_rndw' if len(name_postfix) != 0 else 'rndw'
-    # Создание датасета
+    # Create dataset
     if task == 'seismic_sensors':
         train_loader, test_loader, class_name2idx_dict, classes_weights = create_seismic_sensors_dataset(config_dict)
     elif task == 'hsi_uav':
         train_loader, test_loader, class_name2idx_dict, classes_weights = create_hsi_uav_dataset(config_dict)
-    # вычисл. устройство, на котором проводится обучение
+    # Compute device for training
     device = config_dict['device']
 
-    # если ф-ция потерь перекрестная энтропия, то проверяем, есть ли там веса классов
+    # If loss function is cross-entropy, check if class weights are present
     if config_dict['loss']['type'] == 'crossentropy':
-        # если в параметрах функции потерь стоит строка 'classes', надо передать в функцию вектор весов классов
+        # If the loss function parameters contain the string 'classes', pass class weight vector to the function
         if 'weight' in config_dict['loss']['params']:
             if isinstance(config_dict['loss']['params']['weight'], (list, tuple)):
                 config_dict['loss']['params']['weight'] = torch.tensor(config_dict['loss']['params']['weight'])
@@ -237,12 +237,12 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
             elif config_dict['loss']['params']['weight'] is not None:
                 config_dict['loss']['params']['weight'] = torch.tensor(classes_weights)
 
-    # создание функции потерь
+    # Create loss function
     criterion = criterion_factory_dict[config_dict['loss']['type']](**config_dict['loss']['params'])
 
-    # если ф-ция потерь перекрестная энтропия, то проверяем, есть ли там веса классов
+    # If loss function is cross-entropy, check if class weights are present
     if config_dict['loss']['type'] == 'crossentropy':
-        # если в параметрах функции потерь стоит строка 'classes', надо передать в функцию вектор весов классов
+        # If the loss function parameters contain the string 'classes', pass class weight vector to the function
         if 'weight' in config_dict['loss']['params']:
             if isinstance(config_dict['loss']['params']['weight'], torch.Tensor):
                 config_dict['loss']['params']['weight'] = config_dict['loss']['params']['weight'].cpu().tolist()
@@ -252,11 +252,11 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
 
     #print(model.encoder)
 
-    # тестовое чтение данных
+    # Test data reading
     for data, labels in train_loader:
         break
 
-    # тестовая обработка данных нейронной сетью
+    # Test data processing by neural network
     ret = model(data)
     print('Test model inference:')
     print(f'input_shape:{data.shape}, output_shape:{ret.shape}')
@@ -284,8 +284,8 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
     print('----------------------------------------------------------')
     print()
 
-    # создаем список словарей с информацией о вычисляемых метриках с помощью multiclass confusion matrix
-    # см. подробнее ддокументацию к функции compute_metric_from_confusion
+    # Create list of dictionaries with information about metrics computed using multiclass confusion matrix
+    # See more details in documentation of compute_metric_from_confusion function
     if task == 'seismic_sensors':
         metrics_dict = create_seismic_metrics(class_name2idx_dict, device)
     elif task == 'hsi_uav':
@@ -300,10 +300,10 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
         'lr_scheduler_params': config_dict['lr_scheduler']['params']
     }
 
-    # Создаем модуль Lightning
+    # Create Lightning module
     segmentation_module = LightningSegmentationModule(model, criterion, optimizer_cfg, metrics_dict, class_name2idx_dict)
 
-    # задаем путь до папки с логгерами и создаем логгер, записывающий результаты в csv
+    # Set path to logger folder and create CSV logger
     #path_to_saving_dir = 'saving_dir'
     csv_logger = CSVLoggerMetricsAndConfusion(
         save_dir = path_to_saving_dir,
@@ -311,7 +311,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
         flush_logs_every_n_steps=1,
         )
 
-    # создаем объект, записывающий в чекпоинт лучшую модель
+    # Create object that saves the best model checkpoint
     path_to_save_model_dir = os.path.join(path_to_saving_dir, model_name)
     os.makedirs(path_to_save_model_dir, exist_ok=True)
     monitoring_metric = config_dict['monitoring_metric']
@@ -334,7 +334,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
             deterministic = deterministic
             )
 
-    # сохраняем конфигурацию
+    # Save configuration
     path_to_config = os.path.join(path_to_save_model_dir, 'training_config.yaml')
     with open(path_to_config, 'w', encoding='utf-8') as fd:
         #json.dump(config_dict, fd, indent=4)
@@ -353,7 +353,7 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
 
 def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving_dir:str, basic_bands_indices: List):
     '''
-    Выполняется перебор всех возможных комбинаций каналов мультиспектра
+    Enumerate all possible multispectral channel combinations
     '''
     experiment_date = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
     path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'best_bands_search', f'experiment_{experiment_date}')
@@ -365,7 +365,7 @@ def search_best_multispecter_bands_combination(config_dict: Dict, path_to_saving
     rest_bands_num = len(rest_bands_indices)
     combinations_num = 2**rest_bands_num
     combination_cnt = 1
-    # проверяем все возможные комбинации оставшихся каналов
+    # Check all possible combinations of remaining channels
     for k in range(rest_bands_num):
         #k+=1
         for combination_of_indices in combinations(rest_bands_indices, k):
@@ -539,14 +539,10 @@ if __name__ == '__main__':
 
     elif training_mode == 'search_best_bands':
         path_to_config = paths_to_model_configs[0]
-        # чтение файла конфигурации
+        # Read configuration file
         with open(path_to_config) as fd:
             if path_to_config.endswith('.yaml'):
                 config_dict = yaml.load(fd, Loader=yaml.Loader)
             elif path_to_config.endswith('.json'):
                 config_dict = json.load(fd)
         search_best_multispecter_bands_combination(config_dict, path_to_saving_dir, basic_bands_indices=[1, 2, 3, 7])
-
-
-    
-
