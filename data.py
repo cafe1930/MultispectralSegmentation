@@ -45,10 +45,10 @@ class SegmentationDataset(torch.utils.data.Dataset):
     def __init__(self, path_to_dataset_root:str, samples_df:pd.DataFrame, channel_indices:list, transforms:v2._transform.Transform, dtype:torch.dtype, device:torch.device):
         '''
         In:
-            path_to_dataset_root - путь до корневой папки с датасетом
-            samples_df - pandas.DataFrame с информацией о файлах
-            channel_indices - список с номерами каналов мультиспектрального изображения
-            transforms - аугментация изображений
+            path_to_dataset_root - path to dataset root directory
+            samples_df - pandas.DataFrame with the crucial info about the dataset
+            channel_indices - a list of ulticpectral image channels
+            transforms - images augmentations
         '''
         super().__init__()
 

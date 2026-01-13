@@ -300,7 +300,7 @@ class WindowVisionTransformer(nn.Module):
             hidden_dim = channels
 
         self.positional_encoding = positional_encoding(num_embeddings=self.seq_len, embedding_dim=hidden_dim)
-        # можно создать несколько трансформерных слоев
+        # it is possible to create several transformer layers
         transformer_layers_list = [
             VisionTransformerBlock(
                 num_heads=num_heads,

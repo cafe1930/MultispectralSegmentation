@@ -95,6 +95,7 @@ def create_seismic_sensors_dataset(config_dict):
     classes_pixels_distribution_df = images_df[surface_classes_list]
     classes_pixels_num = classes_pixels_distribution_df.sum()
     classes_weights = classes_pixels_num / classes_pixels_num.sum()
+    #classes_weights = classes_pixels_num.sum() / classes_pixels_num
     classes_weights = classes_weights[surface_classes_list].to_numpy().astype(np.float32)
 
     '''
@@ -228,14 +229,18 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
     device = config_dict['device']
 
     # If loss function is cross-entropy, check if class weights are present
-    if config_dict['loss']['type'] == 'crossentropy':
+    if config_dict['loss']['type'] in ['crossentropy', 'dice', 'focal']:
         # If the loss function parameters contain the string 'classes', pass class weight vector to the function
         if 'weight' in config_dict['loss']['params']:
             if isinstance(config_dict['loss']['params']['weight'], (list, tuple)):
+                # if class weights are specified in config_dict['loss']['params']['weight'] conver them into torch.tensor
                 config_dict['loss']['params']['weight'] = torch.tensor(config_dict['loss']['params']['weight'])
             
             elif config_dict['loss']['params']['weight'] is not None:
-                config_dict['loss']['params']['weight'] = torch.tensor(classes_weights)
+                if config_dict['loss']['params']['weight'] == '1/p': # 1/p - is an inverted prob of class
+                    config_dict['loss']['params']['weight'] = 1/torch.log(torch.tensor(classes_weights)+1.02) # 1.02 - coefficient for stability
+                elif config_dict['loss']['params']['weight'] == '1/log(p+k)':
+                #config_dict['loss']['params']['weight'] = torch.tensor(classes_weights)
 
     # Create loss function
     criterion = criterion_factory_dict[config_dict['loss']['type']](**config_dict['loss']['params'])
