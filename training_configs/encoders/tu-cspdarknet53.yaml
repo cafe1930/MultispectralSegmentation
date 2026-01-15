@@ -6,8 +6,8 @@ input_layer_config:
         - 1
         - 1
         stride:
-        - 1
-        - 1
+        - 2
+        - 2
     replace_type: channels+stride
     weight_update_type: average_all
 model_params:

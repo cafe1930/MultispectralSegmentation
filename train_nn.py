@@ -238,8 +238,9 @@ def create_and_train_moodel(config_dict: Dict, path_to_saving_dir: str, task:str
             
             elif config_dict['loss']['params']['weight'] is not None:
                 if config_dict['loss']['params']['weight'] == '1/p': # 1/p - is an inverted prob of class
-                    config_dict['loss']['params']['weight'] = 1/torch.log(torch.tensor(classes_weights)+1.02) # 1.02 - coefficient for stability
+                    config_dict['loss']['params']['weight'] = 1/torch.tensor(classes_weights)
                 elif config_dict['loss']['params']['weight'] == '1/log(p+k)':
+                    config_dict['loss']['params']['weight'] = 1/torch.log(torch.tensor(classes_weights)+1.02) # 1.02 - coefficient for stability
                 #config_dict['loss']['params']['weight'] = torch.tensor(classes_weights)
 
     # Create loss function
@@ -450,16 +451,32 @@ def investigate_bands_instride_pretrained(config_dict, path_to_saving_dir, cross
 
 def seismic_5x2cross_val(cv_config_dict, path_to_saving_dir):
     for i in range(5):
+        #print(config_dict)
+        #print('------------------------------------------------------------------------------------------')
         
         cv_config_dict['crossval_iteration'] = i
         investigate_bands_instride_pretrained(cv_config_dict, path_to_saving_dir, crossval_iteration=i)
 
+def hsi_rnd_seed_crossval(cfg_dict, path_to_saving_dir, task):
+    path_to_experiment_saving_dir = os.path.join(path_to_saving_dir, 'hsi_seed_CV')
+    os.makedirs(path_to_experiment_saving_dir, exist_ok=True)
+    name_postfix = cfg_dict['name_postfix']
+    for idx, seed in enumerate([1, 4, 8, 6, 9, 0, 42, 666, 777, 12, 14, 88, 16, 32, 64]):
+        print('------------------------------------------------------------------------------------------')
+        print('SEED CROSSVAL')
+        print(f'Iteration={idx}; SEED={seed}')
+        cfg_dict['deterministic_seed'] = seed
+        cfg_dict['name_postfix'] = f'{name_postfix}_seed={seed}'
+
+        #print(cfg_dict['segmentation_nn']['params'])
+        print()
+        create_and_train_moodel(deepcopy(cfg_dict), path_to_experiment_saving_dir, task=task)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--paths_to_model_configs', nargs='+')
     parser.add_argument('--paths_to_encoder_configs', nargs='+')
-    parser.add_argument('--training_mode', help='Mode of training. Available options: "single_nn", "search_best_bands", "investigate_bands_instride", "crossval_bands_instride"')
+    parser.add_argument('--training_mode', help='Mode of training. Available options: `single_nn`, `search_best_bands`, `investigate_bands_instride`, `crossval_bands_instride`, `crossval_seed`')
     parser.add_argument('--path_to_saving_dir')
     parser.add_argument('--task', help='Could be `hsi_uav` OR `seismic_sensors`')
 
@@ -469,23 +486,22 @@ if __name__ == '__main__':
         #'training_configs/models/fpn.yaml',
         #'training_configs/models/fcn.yaml',
         #'training_configs/models/fcn1.yaml',
-        'training_configs/models/unet.yaml',
+        #'training_configs/models/unet.yaml',
         #'training_configs/models/unet_hsi.yaml',
         #'training_configs/models/unet_aux_chtr_hsi.yaml',
-        #'training_configs/models/unet_aux_patr_hsi.yaml',
+        'training_configs/models/unet_aux_patr_hsi.yaml',
 
         '--paths_to_encoder_configs',
         #'training_configs/encoders/tu-maxvit_tiny.yaml',
-        'training_configs/encoders/efficientnet-b2.yaml',
-        #'training_configs/encoders/tu-cspdarknet53.yaml',
+        #'training_configs/encoders/efficientnet-b2.yaml',
+        'training_configs/encoders/tu-cspdarknet53.yaml',
         #'training_configs/encoders/tu-mobilenetv4_hybrid_medium.yaml',
         #'training_configs/encoders/densenet121.yaml',
         #'training_configs/encoders/tu-seresnext50_32x4d.yaml',
         
-        '--training_mode', 'crossval_bands_instride',
+        '--training_mode', 'crossval_seed',
         '--path_to_saving_dir', 'saving_dir',
-        '--task', 'seismic_sensors'
-
+        '--task', 'hsi_uav'
     ]
     args = parser.parse_args(sample_args)
     #print(args)
@@ -495,7 +511,7 @@ if __name__ == '__main__':
     path_to_saving_dir = args.path_to_saving_dir
     task = args.task
     
-    if training_mode == 'single_nn':
+    if training_mode in ('single_nn', 'crossval_seed'):
         
         for path_to_model_config in paths_to_model_configs:
             with open(path_to_model_config) as fd:
@@ -515,7 +531,15 @@ if __name__ == '__main__':
                 current_model_config['segmentation_nn']['input_layer_config'] = encoder_dict['input_layer_config']
 
                 current_model_config['segmentation_nn']['params'].update(encoder_dict['model_params'])
-                create_and_train_moodel(current_model_config, path_to_saving_dir, task=task)
+                
+                if  training_mode == 'crossval_seed':
+                    if task == 'hsi_uav':
+                        hsi_rnd_seed_crossval(current_model_config, path_to_saving_dir, task=task)
+                    else:
+                        raise ValueError('Crossval seed is implemented for `hsi_uav` mode only')
+                else:
+                    create_and_train_moodel(current_model_config, path_to_saving_dir, task=task)
+
 
     elif training_mode in ('investigate_bands_instride', 'crossval_bands_instride'):
         for path_to_model_config in paths_to_model_configs:
