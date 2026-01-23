@@ -792,14 +792,31 @@ class UnetAuxAtt(SegmentationModel):
         else:
             self.classification_head = None
         #print(aux_transformer_config['input_transformer']['params'])
-        aux_transformer_config['output_crossatt']['params']['positional_encoding_x'] = pos_enc_factory_dict[aux_transformer_config['output_crossatt']['params']['positional_encoding_x']]
-        aux_transformer_config['output_crossatt']['params']['positional_encoding_y'] = pos_enc_factory_dict[aux_transformer_config['output_crossatt']['params']['positional_encoding_y']]
-        aux_transformer_config['input_transformer']['params']['positional_encoding'] = pos_enc_factory_dict[aux_transformer_config['input_transformer']['params']['positional_encoding']]
-        aux_transformer_config['intermediate_layers']['params']['positional_encoding'] = pos_enc_factory_dict[aux_transformer_config['intermediate_layers']['params']['positional_encoding']]
+        try:
+            aux_transformer_config['output_crossatt']['params']['positional_encoding_x'] = pos_enc_factory_dict[aux_transformer_config['output_crossatt']['params']['positional_encoding_x']]
+        except KeyError:
+            pass#aux_transformer_config['output_crossatt']['params']['positional_encoding_x'] = aux_transformer_config['output_crossatt']['params']['positional_encoding_x']
+        
+        try:
+            aux_transformer_config['output_crossatt']['params']['positional_encoding_y'] = pos_enc_factory_dict[aux_transformer_config['output_crossatt']['params']['positional_encoding_y']]
+        except KeyError:
+            pass#aux_transformer_config['output_crossatt']['params']['positional_encoding_y'] = aux_transformer_config['output_crossatt']['params']['positional_encoding_y']
+        
+        try:
+            aux_transformer_config['input_transformer']['params']['positional_encoding'] = pos_enc_factory_dict[aux_transformer_config['input_transformer']['params']['positional_encoding']]
+        except KeyError:
+            pass#aux_transformer_config['intermediate_layers']['params']['positional_encoding'] = aux_transformer_config['intermediate_layers']['params']['positional_encoding']
+
         #config['hsi_augmentation']['layer'] = feature_aggregation_factory_dict['hsi_augmentation']['layer']
         if aux_transformer_config['hsi_augmentation']['layer'] == 'crossatt':
-            aux_transformer_config['hsi_augmentation']['params']['positional_encoding_x'] = pos_enc_factory_dict[aux_transformer_config['hsi_augmentation']['params']['positional_encoding_x']]
-            aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y'] = pos_enc_factory_dict[aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y']]
+            try:
+                aux_transformer_config['hsi_augmentation']['params']['positional_encoding_x'] = pos_enc_factory_dict[aux_transformer_config['hsi_augmentation']['params']['positional_encoding_x']]
+            except KeyError:
+                pass
+            try:
+                aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y'] = pos_enc_factory_dict[aux_transformer_config['hsi_augmentation']['params']['positional_encoding_y']]
+            except KeyError:
+                pass
 
         self.aux_transf = nn.ModuleDict()
         patch_emb_name = aux_transformer_config['patch_emd']['layer']
